@@ -153,7 +153,7 @@ G. 성공 기준 초안 정의
 
 아래 3개의 결과물을 만들어라.
 
-산출물 1. phase0_platform_vision.md
+산출물 1. Task1_platform_vision.md
 
 포함 항목:
 	•	프로젝트 개요
@@ -165,7 +165,7 @@ G. 성공 기준 초안 정의
 	•	In Scope / Out of Scope
 	•	성공 기준
 
-산출물 2. phase0_document_system_vs_knowledge_platform.md
+산출물 2. Task1_document_system_vs_knowledge_platform.md
 
 비교 문서 형식으로 작성
 포함 항목:
@@ -174,7 +174,7 @@ G. 성공 기준 초안 정의
 	•	왜 이번 프로젝트는 지식 플랫폼이어야 하는지
 	•	이 차이가 이후 설계에 미치는 영향
 
-산출물 3. phase0_phase1_input_summary.md
+산출물 3. Task1_phase1_input_summary.md
 
 짧은 요약 문서
 포함 항목:

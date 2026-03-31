@@ -166,7 +166,7 @@ E. 설계 리뷰 체크리스트 도출
 
 아래 2개의 결과물을 작성하라.
 
-산출물 1. phase0_platform_principles.md
+산출물 1. Task2_platform_principles.md
 
 반드시 포함할 것:
 	•	문서 목적
@@ -176,7 +176,7 @@ E. 설계 리뷰 체크리스트 도출
 	•	예외 적용 원칙
 	•	설계 시 활용 방법
 
-산출물 2. phase0_design_review_checklist.md
+산출물 2. Task2_design_review_checklist.md
 
 체크리스트 형식으로 작성
 권장 분류:

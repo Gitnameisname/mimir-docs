@@ -242,7 +242,7 @@ Phase 1 도메인 모델과 Phase 2 API/서비스 설계에 전달할 핵심 요
 
 아래 3개의 결과물을 작성하라.
 
-산출물 1. phase0_api_first_definition.md
+산출물 1. Task3_api_first_definition.md
 
 반드시 포함:
 	•	문서 목적
@@ -254,7 +254,7 @@ Phase 1 도메인 모델과 Phase 2 API/서비스 설계에 전달할 핵심 요
 
 ⸻
 
-산출물 2. phase0_api_domain_map.md
+산출물 2. Task3_api_domain_map.md
 
 반드시 포함:
 	•	API 도메인 목록
@@ -267,7 +267,7 @@ Phase 1 도메인 모델과 Phase 2 API/서비스 설계에 전달할 핵심 요
 
 ⸻
 
-산출물 3. phase0_api_governance_summary.md
+산출물 3. Task3_api_governance_summary.md
 
 반드시 포함:
 	•	설계 상위 규칙

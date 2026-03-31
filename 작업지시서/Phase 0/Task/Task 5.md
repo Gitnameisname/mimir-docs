@@ -274,7 +274,7 @@ J. Phase 1/2 입력 요약 정리
 
 아래 3개의 결과물을 작성하라.
 
-산출물 1. phase0_tech_direction.md
+산출물 1. Task 5_tech_direction.md
 
 반드시 포함:
 	•	문서 목적
@@ -289,7 +289,7 @@ J. Phase 1/2 입력 요약 정리
 
 ⸻
 
-산출물 2. phase0_tech_selection_criteria.md
+산출물 2. Task 5_tech_selection_criteria.md
 
 반드시 포함:
 	•	기술 선택 기준 목록
@@ -299,7 +299,7 @@ J. Phase 1/2 입력 요약 정리
 
 ⸻
 
-산출물 3. phase0_phase1_phase2_tech_input_summary.md
+산출물 3. Task 5_phase1_phase2_tech_input_summary.md
 
 반드시 포함:
 	•	Phase 1 도메인 모델 설계에 주는 제약/가이드

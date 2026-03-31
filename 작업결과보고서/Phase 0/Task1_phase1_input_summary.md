@@ -54,5 +54,5 @@ Document를 파일 레코드로 취급하지 않는다. Document는 플랫폼이
 
 ## 4. 참조 문서
 
-- [phase0_platform_vision.md](phase0_platform_vision.md) — 플랫폼 비전, 핵심 자산 정의, In/Out Scope
-- [phase0_document_system_vs_knowledge_platform.md](phase0_document_system_vs_knowledge_platform.md) — 설계 방향 차이 비교 및 설계 영향 분석
+- [Task1_platform_vision.md](Task1_platform_vision.md) — 플랫폼 비전, 핵심 자산 정의, In/Out Scope
+- [Task1_document_system_vs_knowledge_platform.md](Task1_document_system_vs_knowledge_platform.md) — 설계 방향 차이 비교 및 설계 영향 분석

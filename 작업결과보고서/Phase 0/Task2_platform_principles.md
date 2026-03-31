@@ -323,4 +323,4 @@ P1 (API-first) > P2 (범용 도메인 모델) > P5 (버전 추적) > P3 (User/Ad
 3. **API 설계 시**: P1, P9를 기준으로 API가 내부 UI가 아닌 외부 소비자도 고려한 설계인지 검토한다.
 4. **데이터 모델 설계 시**: P2, P4, P6, P7을 기준으로 유형 종속·저장 종속 여부를 검토한다.
 5. **UI 설계 시**: P3을 기준으로 운영 기능이 User UI에 침범하고 있지 않은지 확인한다.
-6. **설계 리뷰 시**: `phase0_design_review_checklist.md`를 활용한다.
+6. **설계 리뷰 시**: [Task2_design_review_checklist.md](./Task2_design_review_checklist.md)를 활용한다.

@@ -253,7 +253,7 @@ H. Phase 1/2 입력 요약 정리
 
 아래 3개의 결과물을 작성하라.
 
-산출물 1. phase0_user_admin_ui_principles.md
+산출물 1. Task4_user_admin_ui_principles.md
 
 반드시 포함:
 	•	문서 목적
@@ -266,7 +266,7 @@ H. Phase 1/2 입력 요약 정리
 
 ⸻
 
-산출물 2. phase0_ui_responsibility_matrix.md
+산출물 2. Task4_ui_responsibility_matrix.md
 
 표 형식 권장
 반드시 포함:
@@ -278,7 +278,7 @@ H. Phase 1/2 입력 요약 정리
 
 ⸻
 
-산출물 3. phase0_ui_to_api_boundary_summary.md
+산출물 3. Task4_ui_to_api_boundary_summary.md
 
 반드시 포함:
 	•	UI 분리와 API 경계의 관계
