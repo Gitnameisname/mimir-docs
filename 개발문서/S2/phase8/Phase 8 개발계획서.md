@@ -219,9 +219,16 @@ Phase 8은 "구조화 데이터 추출 및 검증" Phase이다. 다음을 담당
 
 5. **추출 결과 저장**
    - 승인 후:
-     - ExtractionCandidate를 최종 상태로 저장
-     - Document의 metadata 필드에 추출 결과 통합
-     - 감사 로그: `action=extraction_approved, approved_by={user_id}`
+     - ExtractionCandidate를 최종 상태(`approved` / `modified`)로 저장
+     - 추출 결과는 **별도 artifact**로 관리: `ApprovedExtraction` 테이블에 `document_id + version_id + extraction_schema_version` 복합 키로 저장
+       - Document.metadata에는 직접 통합하지 않음 (DB 모델 generic 유지 원칙 준수)
+       - 필요 시 **projection / materialized view**로만 metadata에 반영
+     - 추출 스키마 버전, 모델 버전, 인간 수정 이력을 독립 추적 가능하도록 artifact에 다음 필드 포함:
+       - `extraction_schema_version`: 사용된 스키마 버전
+       - `extraction_model`: 추출에 사용된 모델명 및 버전
+       - `human_edits`: 인간이 수정한 필드 목록과 수정 전/후 값
+       - `approved_at`, `approved_by`
+     - 감사 로그: `action=extraction_approved, approved_by={user_id}, artifact_id={approved_extraction_id}`
    - 거절 후:
      - ExtractionCandidate를 `rejected` 상태로 표시
      - 사용자가 수동 입력 옵션 제공
@@ -248,7 +255,8 @@ Phase 8은 "구조화 데이터 추출 및 검증" Phase이다. 다음을 담당
 #### 검수 기준
 - 추출 결과가 ExtractionTargetSchema 필드에 모두 매핑되는가
 - 추출 재실행 후 신뢰도 변화가 추적되는가
-- 사용자 수정 후 metadata 필드가 정확히 업데이트되는가
+- 사용자 수정 후 ApprovedExtraction artifact가 정확히 저장되는가 (Document.metadata 직접 통합 아님)
+- projection/materialized view 경유 시 metadata 반영이 정확한가
 - 동시성 문제 없음 (여러 사용자가 동일 문서 추출 결과 수정 시)
 
 ---
@@ -405,8 +413,10 @@ ExtractionCandidate (자동 추출값)
     
          ↓
          
-Document.metadata (최종 저장)
-    └─ {field1: approved_value1, ...}
+ApprovedExtraction artifact (최종 저장, Document.metadata와 분리)
+    ├─ {field1: approved_value1, ...}
+    ├─ extraction_schema_version, extraction_model, human_edits
+    └─ projection/materialized view로 metadata 반영 가능
 ```
 
 ### 4.2 추출 프롬프트 엔지니어링
@@ -430,7 +440,7 @@ Document.metadata (최종 저장)
 ## 5. 의존 관계
 
 ### 선행 Phase
-- **Phase 0**: (의존 없음)
+- **Phase 0**: S2 원칙 정의
 - **Phase 1**: LLM Provider 추상화 (추출 모델)
 - **Phase 2**: Citation 5-tuple (span 역참조와 유사)
 - **Phase 7**: 평가 러너 (추출 품질 평가)
@@ -446,7 +456,7 @@ Document.metadata (최종 저장)
 | 항목 | 기준 |
 |------|------|
 | **FG8.1** | 모든 DocumentType의 metadata schema가 ExtractionTargetSchema로 정확히 매핑되는가 / 스키마 버전 관리가 Document와 동일하게 작동하는가 |
-| **FG8.2** | 문서 업로드 시 자동 추출이 정상 실행되는가 / 추출 결과가 pending 상태로 사용자 큐에 들어가는가 / 사용자 승인 후 metadata 필드에 저장되는가 / 사용자가 자동 추출값을 수정 후 승인 가능한가 |
+| **FG8.2** | 문서 업로드 시 자동 추출이 정상 실행되는가 / 추출 결과가 pending 상태로 사용자 큐에 들어가는가 / 사용자 승인 후 ApprovedExtraction artifact에 정확히 저장되는가 (Document.metadata 직접 통합 아님) / projection/materialized view 경유 시 metadata 반영이 정확한가 / 사용자가 자동 추출값을 수정 후 승인 가능한가 |
 | **FG8.3** | 추출된 필드의 span이 원문과 정확히 매칭되는가 / deterministic mode에서 재추출 시 동일 결과 재현되는가 / 추출 품질 평가 지표가 실제 정확도와 상관 / 복수 span 필드 처리 정확성 |
 | **통합** | Phase 6 FG6.3 추출 관리 UI와 완전히 연동되는가 / Phase 7 평가 인프라와 통합되는가 |
 

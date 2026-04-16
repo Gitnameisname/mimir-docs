@@ -315,7 +315,7 @@ Admin Router
 - 알림: toast 메시지 (sonner 또는 react-toastify)
 
 ### 4.4 상태 관리
-- 전역 에이전트 상태 (Redux 또는 Zustand): 현재 로그인 사용자, 권한 캐시
+- 전역 에이전트 상태 (Zustand): 현재 로그인 사용자, 권한 캐시
 - 페이지별 로컬 상태: 폼 입력, 필터 선택, UI 전개/축소 상태
 - React Query: API 캐싱 및 백그라운드 동기화
 
@@ -332,7 +332,7 @@ Admin Router
 - **Phase 0**: UI 5회 리뷰 체크리스트, 네비게이션 원칙
 - **Phase 1**: LLM Provider, Embedding, Prompt Registry API
 - **Phase 2**: (Citation 계약, 실질적 의존 없음)
-- **Phase 3**: (Conversation, 실질적 의존 없음)
+- **Phase 3**: Conversation 도메인 — FG6.1 비용·사용량 대시보드에서 대화 세션별 모델 호출 메트릭 포함 검토 필요
 - **Phase 4**: Agent Principal, Delegation, Scope Profile API
 - **Phase 5**: 에이전트 제안 큐, 감사 API
 

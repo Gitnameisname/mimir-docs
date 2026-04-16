@@ -15,7 +15,7 @@ Phase 2. Grounded Retrieval v2 + Citation Contract
 - Phase 0 완료 (S2 원칙, 설계 결정 확정)
 - Phase 1 완료 (LLM, Embedding, Prompt Registry 추상화)
 - S1 Phase 11 RAG 구현 분석 (기존 검색 응답 포맷 이해)
-- Phase 10 벡터화 파이프라인 기초 (선택, Phase 2와 병행 가능)
+- S1 Phase 10 벡터화 파이프라인 기초 (선택, Phase 2와 병행 가능)
 
 ### 기대 결과
 - 검색 응답에 citation 5-tuple `{document_id, version_id, node_id, span_offset, content_hash}` 필수 포함
@@ -98,7 +98,7 @@ Phase 2는 "근거 기반 검색(Grounded Retrieval)"을 정의한다. S1 Phase 
 - Phase 0 완료 (설계 결정 3.4 Citation Contract 확정)
 - Phase 1 완료 (PromptRegistry로 평가용 프롬프트 관리)
 - S1 Phase 11 RAG 구현 분석
-- Phase 10 벡터화 파이프라인의 청크 메타데이터 구조 (선택)
+- S1 Phase 10 벡터화 파이프라인의 청크 메타데이터 구조 (선택)
 
 #### 출력 (산출물)
 - `Citation` 데이터 클래스 (또는 Pydantic Model)
@@ -477,7 +477,7 @@ Phase 2를 시작하려면:
 - Phase 0, 1 완료
 - S1 Phase 11 RAG 구현 상세 분석
 - 기본 검색 쿼리 셋 확보 (테스트/평가용)
-- Phase 10 벡터화 준비 상태 (또는 병행 가능)
+- S1 Phase 10 벡터화 준비 상태 (또는 병행 가능)
 
 ---
 

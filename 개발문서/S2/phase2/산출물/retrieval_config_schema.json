@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RetrievalConfig",
+  "description": "DocumentType별 Retriever/Reranker 설정",
+  "type": "object",
+  "properties": {
+    "default_retriever": {
+      "type": "string",
+      "enum": ["fts", "vector", "hybrid"],
+      "default": "fts",
+      "description": "기본 검색 전략"
+    },
+    "retriever_params": {
+      "type": "object",
+      "properties": {
+        "fts_weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "vector_weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "similarity_threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "default_reranker": {
+      "type": ["string", "null"],
+      "enum": ["cross_encoder", "rule_based", "null", null],
+      "default": null
+    },
+    "reranker_params": {
+      "type": "object",
+      "properties": {
+        "model": { "type": "string" },
+        "freshness_bonus": { "type": "number", "minimum": 0 },
+        "pinned_bonus": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
