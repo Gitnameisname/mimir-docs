@@ -1,8 +1,10 @@
-# Task 4-4. Agent Principal Type + Delegation 모델 + DB 마이그레이션
+# Task 4-4. Agent Principal Type + Delegation 모델 + DB 마이그레이션 + PII 배치 잡
 
 ## 1. 작업 목적
 
 AI 에이전트를 Mimir의 독립 Principal로 모델링하고, 에이전트가 사용자를 대행하여 API를 호출할 수 있는 위임 구조를 구축한다. 기존의 user/admin/system 역할에 agent 타입을 추가하고, OAuth 2.0 client-credentials 인증 흐름에 통합한다. 모든 API 호출에 대해 actor_type (user/agent) 및 acting_on_behalf_of 필드를 감시 로그에 기록하여 감사 추적을 강화한다 (S2 원칙 ⑤, ⑥).
+
+또한 Phase 3에서 이월된 **PII 배치 잡**을 구현한다. `conversations.expires_at` 컬럼에 기록된 만료 시각을 기준으로 만료된 대화 데이터를 주기적으로 삭제하여 GDPR 및 개인정보 처리방침을 준수한다.
 
 ## 2. 작업 범위
 
@@ -51,6 +53,14 @@ AI 에이전트를 Mimir의 독립 Principal로 모델링하고, 에이전트가
    - Delegation 권한 검증 테스트 (delegate:search, delegate:write)
    - access_context 생성 및 전파 테스트
    - 감시 로그 actor_type, acting_on_behalf_of 필드 검증 테스트
+
+9. **PII 배치 잡 — conversations 자동 만료 삭제** _(Phase 3 이월: PH3-CARRY-001)_
+   - 대상: `conversations` 테이블의 `expires_at IS NOT NULL AND expires_at < NOW()` 레코드
+   - 연쇄 삭제: `turns` → `messages` (FK CASCADE 또는 명시적 순서 삭제)
+   - 스케줄러: APScheduler (in-process, 폐쇄망 동작 보장 — S2 원칙 ⑦)
+   - 실행 주기: 환경변수 `PII_CLEANUP_INTERVAL_HOURS` (기본: 24시간)
+   - 삭제 전 감사 로그 기록 (`actor_type="system"`, `action="pii_cleanup"`)
+   - 환경변수 `PII_CLEANUP_ENABLED=false`로 전체 비활성화 가능
 
 ### 제외 범위
 
@@ -1009,6 +1019,214 @@ async def test_audit_log_with_agent(db_session: AsyncSession):
     # assert audit_log.actor_id == agent_id
 ```
 
+### 4-9. PII 배치 잡 (conversations 자동 만료 삭제)
+
+**파일:** `/backend/app/jobs/conversation_cleanup.py`
+
+```python
+"""PII 배치 잡 — 만료된 대화 데이터 자동 삭제.
+
+Phase 3 이월 항목 (PH3-CARRY-001).
+conversations.expires_at 기준으로 만료된 레코드를 주기적으로 삭제한다.
+
+환경변수:
+    PII_CLEANUP_ENABLED: "true"(기본) / "false" — 잡 전체 비활성화
+    PII_CLEANUP_INTERVAL_HOURS: 실행 주기 (기본: 24)
+    PII_CLEANUP_BATCH_SIZE: 1회 삭제 최대 건수 (기본: 1000, OOM 방지)
+"""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+from typing import Optional
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
+from app.config import settings
+from app.db import get_db
+from app.audit.emitter import audit_emitter
+
+logger = logging.getLogger(__name__)
+
+_scheduler: Optional[AsyncIOScheduler] = None
+
+
+async def run_conversation_cleanup() -> int:
+    """만료된 대화를 삭제하고 삭제 건수를 반환한다.
+
+    삭제 순서: messages → turns → conversations (FK 제약 준수).
+    삭제 전 감사 로그를 기록한다.
+
+    Returns:
+        삭제된 conversations 건수.
+    """
+    if not settings.PII_CLEANUP_ENABLED:
+        logger.debug("PII cleanup disabled — skipping")
+        return 0
+
+    batch_size = settings.PII_CLEANUP_BATCH_SIZE
+    now = datetime.now(timezone.utc)
+
+    deleted_count = 0
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # 만료된 conversation ID 목록 조회 (batch)
+            cur.execute(
+                """
+                SELECT id FROM conversations
+                WHERE expires_at IS NOT NULL
+                  AND expires_at < %s
+                LIMIT %s
+                """,
+                (now, batch_size),
+            )
+            rows = cur.fetchall()
+            if not rows:
+                return 0
+
+            conv_ids = [str(r[0]) for r in rows]
+            placeholders = ",".join(["%s"] * len(conv_ids))
+
+            # 감사 로그 먼저 기록
+            for conv_id in conv_ids:
+                audit_emitter.emit(
+                    event_type="conversation.expired",
+                    action="pii_cleanup",
+                    actor_id=None,
+                    actor_type="system",
+                    resource_type="conversation",
+                    resource_id=conv_id,
+                    result="deleted",
+                    metadata={"reason": "expires_at_exceeded", "deleted_at": now.isoformat()},
+                )
+
+            # messages → turns → conversations 순서로 삭제
+            cur.execute(
+                f"""
+                DELETE FROM messages
+                WHERE turn_id IN (
+                    SELECT id FROM turns WHERE conversation_id IN ({placeholders})
+                )
+                """,
+                conv_ids,
+            )
+            cur.execute(
+                f"DELETE FROM turns WHERE conversation_id IN ({placeholders})",
+                conv_ids,
+            )
+            cur.execute(
+                f"DELETE FROM conversations WHERE id IN ({placeholders})",
+                conv_ids,
+            )
+            deleted_count = len(conv_ids)
+            conn.commit()
+
+    logger.info("PII cleanup: deleted %d expired conversations", deleted_count)
+    return deleted_count
+
+
+def start_cleanup_scheduler() -> None:
+    """앱 시작 시 APScheduler를 초기화하고 배치 잡을 등록한다."""
+    global _scheduler
+
+    if not settings.PII_CLEANUP_ENABLED:
+        logger.info("PII cleanup scheduler disabled by config")
+        return
+
+    _scheduler = AsyncIOScheduler()
+    _scheduler.add_job(
+        run_conversation_cleanup,
+        trigger=IntervalTrigger(hours=settings.PII_CLEANUP_INTERVAL_HOURS),
+        id="pii_conversation_cleanup",
+        name="PII Conversation Cleanup",
+        replace_existing=True,
+        misfire_grace_time=3600,  # 1시간 이내 지연 허용
+    )
+    _scheduler.start()
+    logger.info(
+        "PII cleanup scheduler started — interval=%dh batch_size=%d",
+        settings.PII_CLEANUP_INTERVAL_HOURS,
+        settings.PII_CLEANUP_BATCH_SIZE,
+    )
+
+
+def stop_cleanup_scheduler() -> None:
+    """앱 종료 시 스케줄러를 중단한다."""
+    global _scheduler
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        logger.info("PII cleanup scheduler stopped")
+```
+
+**설정 추가 (`/backend/app/config.py`):**
+
+```python
+# PII 배치 잡 설정
+PII_CLEANUP_ENABLED: bool = env.bool("PII_CLEANUP_ENABLED", default=True)
+PII_CLEANUP_INTERVAL_HOURS: int = env.int("PII_CLEANUP_INTERVAL_HOURS", default=24)
+PII_CLEANUP_BATCH_SIZE: int = env.int("PII_CLEANUP_BATCH_SIZE", default=1000)
+```
+
+**앱 라이프사이클 훅 등록 (`/backend/app/main.py`):**
+
+```python
+from app.jobs.conversation_cleanup import start_cleanup_scheduler, stop_cleanup_scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    start_cleanup_scheduler()
+    yield
+    stop_cleanup_scheduler()
+```
+
+**단위 테스트 (`/backend/tests/unit/jobs/test_conversation_cleanup.py`):**
+
+```python
+"""PII 배치 잡 단위 테스트."""
+
+import pytest
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch, MagicMock
+
+from app.jobs.conversation_cleanup import run_conversation_cleanup
+
+
+@pytest.mark.asyncio
+async def test_cleanup_skips_when_disabled(monkeypatch):
+    """PII_CLEANUP_ENABLED=false 시 삭제 없이 0 반환."""
+    monkeypatch.setattr("app.jobs.conversation_cleanup.settings.PII_CLEANUP_ENABLED", False)
+    deleted = await run_conversation_cleanup()
+    assert deleted == 0
+
+
+@pytest.mark.asyncio
+async def test_cleanup_deletes_expired_conversations(mock_db_conn):
+    """expires_at < NOW() 인 레코드가 삭제된다."""
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+    # mock_db_conn 에 만료된 conversation 1건 세팅
+    mock_db_conn.cursor().__enter__().fetchall.return_value = [("conv-uuid-1",)]
+
+    with patch("app.jobs.conversation_cleanup.get_db", return_value=mock_db_conn):
+        deleted = await run_conversation_cleanup()
+
+    assert deleted == 1
+
+
+@pytest.mark.asyncio
+async def test_cleanup_no_op_when_no_expired(mock_db_conn):
+    """만료된 레코드 없으면 0 반환."""
+    mock_db_conn.cursor().__enter__().fetchall.return_value = []
+
+    with patch("app.jobs.conversation_cleanup.get_db", return_value=mock_db_conn):
+        deleted = await run_conversation_cleanup()
+
+    assert deleted == 0
+```
+
+---
+
 ## 5. 산출물
 
 1. **Agent 도메인 모델** (`/backend/app/models/agent.py`)
@@ -1046,6 +1264,16 @@ async def test_audit_log_with_agent(db_session: AsyncSession):
    - Delegation 로직 테스트
    - 감시 로그 기록 테스트
 
+9. **PII 배치 잡** (`/backend/app/jobs/conversation_cleanup.py`) _(Phase 3 이월)_
+   - `run_conversation_cleanup()` 함수 및 APScheduler 래퍼
+   - 설정 값 (`PII_CLEANUP_ENABLED`, `PII_CLEANUP_INTERVAL_HOURS`, `PII_CLEANUP_BATCH_SIZE`)
+   - 앱 라이프사이클 훅 등록 (`main.py` lifespan)
+
+10. **PII 배치 잡 단위 테스트** (`/backend/tests/unit/jobs/test_conversation_cleanup.py`)
+    - 비활성화 시 no-op 검증
+    - 만료 레코드 삭제 검증
+    - 빈 결과 no-op 검증
+
 ## 6. 완료 기준
 
 1. Agent 및 APIKey 모델이 정규화되었는가?
@@ -1058,6 +1286,10 @@ async def test_audit_log_with_agent(db_session: AsyncSession):
 8. 모든 단위 테스트가 통과하는가 (`pytest -v`)?
 9. mypy 타입 검사를 통과하는가?
 10. kill switch 플래그 (is_disabled)가 모든 쓰기 작업 전에 확인되는가?
+11. PII 배치 잡이 `expires_at < NOW()` 인 conversations를 삭제하는가? _(Phase 3 이월)_
+12. `PII_CLEANUP_ENABLED=false` 시 잡이 실행되지 않는가?
+13. 삭제 전 감사 로그(`actor_type="system"`, `action="pii_cleanup"`)가 기록되는가?
+14. 배치 잡 단위 테스트 3건이 모두 통과하는가?
 
 ## 7. 작업 지침
 

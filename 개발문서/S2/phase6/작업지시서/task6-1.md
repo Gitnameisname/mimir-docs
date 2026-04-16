@@ -1,7 +1,9 @@
-# FG6.1 작업지시서 1: Admin UI 통합 레이아웃 + 좌측 네비게이션 + 공통 컴포넌트 라이브러리
+# FG6.1 작업지시서 1: Admin UI 통합 레이아웃 + 좌측 네비게이션 + 공통 컴포넌트 라이브러리 + 대화 FTS
 
 ## 1. 작업 목적
 Mimir S2 프로젝트의 관리자 대시보드(Phase 6)에 필요한 통합 레이아웃, 좌측 네비게이션 구조, 및 공통 Admin UI 컴포넌트 라이브러리를 구축하여, FG6.2~FG6.4에서 재사용 가능한 기반 인프라를 제공합니다.
+
+또한 Phase 3에서 이월된 **대화 전문 FTS (tsvector)** 백엔드 작업을 처리한다. Phase 6 시작 전에 `conversations` 테이블에 `search_vector tsvector` 컬럼과 GIN 인덱스를 추가하고, `ConversationRepository.list()`의 제목 LIKE 검색을 FTS로 전환하여 대화 수 증가에 따른 검색 성능 저하를 사전에 차단한다.
 
 ## 2. 작업 범위
 
@@ -29,10 +31,19 @@ Mimir S2 프로젝트의 관리자 대시보드(Phase 6)에 필요한 통합 레
 - 반응형 디자인 (640px, 768px, 1024px+)
 - WCAG 2.1 AA 접근성 준수
 
+- **대화 FTS 백엔드 사전 작업** _(Phase 3 이월: PH3-CARRY-002)_
+  - `conversations` 테이블에 `search_vector tsvector` 컬럼 추가
+  - `tsvector` 자동 갱신 트리거 (`title` 컬럼 기반, `simple` 사전)
+  - GIN 인덱스 생성 (`ix_conversations_search_vector`)
+  - `ConversationRepository.list()` — LIKE 검색 → `search_vector @@ plainto_tsquery('simple', ...)` 전환
+  - LIKE 폴백 유지 (tsquery 파싱 실패 시)
+  - Alembic 마이그레이션 스크립트 작성
+
 ### 제외 사항
 - 개별 관리 페이지 구현 (모델/프로바이더, 프롬프트, 비용 등) → FG6.2~6.4에서 수행
 - FG6.2, FG6.3 등 다른 기능 그룹의 페이지 개발
 - 외부 CDN 의존 (S2 원칙 ⑦ 폐쇄망)
+- 대화 FTS UI 변경 (백엔드 API 인터페이스는 동일, 프론트엔드 변경 없음)
 
 ## 3. 선행 조건
 - Phase 1~5 백엔드 API 완성 및 문서화
@@ -521,6 +532,126 @@ Mimir S2 프로젝트의 관리자 대시보드(Phase 6)에 필요한 통합 레
 - 색상 대비 확인 (WCAG AA 최소 4.5:1)
 - 폰트 크기 최소 16px
 
+### 4-N. 대화 FTS — tsvector 전환 (백엔드 사전 작업)
+
+_(Phase 3 이월: PH3-CARRY-002)_
+
+**파일:** `/backend/alembic/versions/0011_conversations_fts.py`
+
+```python
+"""Add tsvector search_vector column to conversations.
+
+Revision ID: 0011
+Revises: 0010
+Create Date: 2026-04-XX
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+revision = "0011"
+down_revision = "0010"
+
+
+def upgrade() -> None:
+    # tsvector 컬럼 추가
+    op.add_column(
+        "conversations",
+        sa.Column(
+            "search_vector",
+            sa.Column.__class__,  # placeholder — 실제: postgresql.TSVECTOR
+        ),
+    )
+    # 실제 SQL 사용 (TSVECTOR는 SQLAlchemy dialect 타입)
+    op.execute(
+        "ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "
+        "search_vector tsvector "
+        "GENERATED ALWAYS AS (to_tsvector('simple', coalesce(title, ''))) STORED"
+    )
+
+    # GIN 인덱스
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_conversations_search_vector "
+        "ON conversations USING gin(search_vector)"
+    )
+
+    # 기존 레코드 벡터 채우기 (GENERATED ALWAYS STORED라면 자동, 아닐 경우 아래 실행)
+    # op.execute("UPDATE conversations SET search_vector = to_tsvector('simple', coalesce(title, ''))")
+
+
+def downgrade() -> None:
+    op.execute("DROP INDEX IF EXISTS ix_conversations_search_vector")
+    op.execute("ALTER TABLE conversations DROP COLUMN IF EXISTS search_vector")
+```
+
+> **참고**: PostgreSQL 12+의 `GENERATED ALWAYS AS ... STORED` 문법을 사용하면 트리거 없이 `title` 변경 시 `search_vector`가 자동 갱신된다. 미지원 버전이면 `BEFORE INSERT OR UPDATE` 트리거로 대체한다.
+
+**`ConversationRepository.list()` 수정:**
+
+```python
+# backend/app/repositories/conversation_repository.py (관련 부분)
+
+def list(
+    self,
+    page: int = 1,
+    page_size: int = 20,
+    *,
+    owner_id: str,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+) -> tuple[list[Conversation], int]:
+    conditions = ["owner_id = %s"]
+    params: list = [owner_id]
+
+    if status:
+        conditions.append("status = %s")
+        params.append(status)
+
+    if search:
+        # FTS 우선, 파싱 실패 시 LIKE 폴백
+        try:
+            # plainto_tsquery는 특수문자 안전 처리 (인젝션 없음)
+            conditions.append("search_vector @@ plainto_tsquery('simple', %s)")
+            params.append(search)
+        except Exception:
+            conditions.append("title ILIKE %s")
+            params.append(f"%{search}%")
+
+    where = " AND ".join(conditions)
+    # ... 기존 쿼리 구성 로직
+```
+
+**단위 테스트 (`/backend/tests/unit/test_conversation_fts.py`):**
+
+```python
+"""대화 FTS 단위 테스트."""
+
+import pytest
+from unittest.mock import MagicMock, patch
+
+
+def test_fts_query_used_when_search_provided(mock_conv_repo):
+    """search 파라미터가 있으면 FTS 쿼리(@@ plainto_tsquery)를 사용한다."""
+    mock_conn = MagicMock()
+    repo = ConversationRepository(mock_conn)
+    repo.list(page=1, page_size=20, owner_id="user-1", search="회의록")
+    sql = mock_conn.cursor().__enter__().execute.call_args[0][0]
+    assert "plainto_tsquery" in sql
+
+
+def test_like_fallback_when_fts_fails(mock_conv_repo, monkeypatch):
+    """FTS 실패 시 LIKE 폴백이 동작한다."""
+    # plainto_tsquery 호출 시 예외 발생하도록 mock
+    ...
+
+
+def test_no_search_returns_all(mock_conv_repo):
+    """search 없으면 FTS 조건 없이 전체 조회한다."""
+    ...
+```
+
+---
+
 ## 5. 산출물
 
 ### 필수 산출물
@@ -547,7 +678,12 @@ Mimir S2 프로젝트의 관리자 대시보드(Phase 6)에 필요한 통합 레
    - `components/admin/__tests__/SideNav.test.tsx`
    - `components/admin/__tests__/AdminTable.test.tsx`
 
-5. 검수보고서 (5회 UI 리뷰)
+5. **대화 FTS 백엔드 산출물** _(Phase 3 이월)_
+   - Alembic 마이그레이션 (`0011_conversations_fts.py`)
+   - `ConversationRepository.list()` FTS 전환 + LIKE 폴백
+   - 단위 테스트 (`tests/unit/test_conversation_fts.py`)
+
+6. 검수보고서 (5회 UI 리뷰)
    - UI 리뷰 기록 (데스크탑/태블릿/모바일)
    - 개선 내용 기록
 
@@ -568,6 +704,9 @@ Mimir S2 프로젝트의 관리자 대시보드(Phase 6)에 필요한 통합 레
 - [ ] 단위 테스트 커버리지 > 80%
 - [ ] 5회 UI 리뷰 완료 및 개선 사항 반영
 - [ ] 보안취약점검사 완료 및 결과 보고서 작성
+- [ ] 대화 FTS: `search_vector tsvector` 컬럼 및 GIN 인덱스 마이그레이션 적용됨 _(Phase 3 이월)_
+- [ ] 대화 FTS: `ConversationRepository.list()` FTS 전환 및 LIKE 폴백 동작 확인
+- [ ] 대화 FTS: 단위 테스트 3건 통과
 
 ## 7. 작업 지침
 
