@@ -13,9 +13,16 @@
   - 평균 승인 소요 시간 (BarChart)
 - 에이전트별 상세 통계 테이블
   - 총 제안, 승인, 거절, 승인률%, 거절 사유 상위 5개, 자주 제안 문서 타입
+  - **[PH5-CARRY-001]** `GET /admin/agents/{id}/statistics` FG5.3 API 연동 (승인율·평균검토시간·반려사유)
 - 이상 행동 알림
   - 24시간 내 거절률 > 50% 에이전트 강조 (빨간 배지)
   - 킬스위치 발동 히스토리 (timeline)
+- **[PH5-CARRY-001] 에이전트별 감사 이력 탭**
+  - 에이전트 상세 드릴다운 시 감사 이력 탭 추가
+  - `GET /admin/agents/{id}/audit` API 연동
+  - 날짜 범위·이벤트 타입 필터 + 페이지네이션
+  - 이벤트 타입별 아이콘 (proposed/approved/rejected/withdrawn/kill_switch)
+  - `acting_on_behalf_of` 필드 표시 (위임 대상 사용자 ID)
 - CSV Export (통계 데이터)
 - React Query polling (30초)
 - 단위 테스트
@@ -29,12 +36,14 @@
 
 ## 3. 선행 조건
 - Phase 4 완료: Agent, Proposal, ProposalDecision 모델
-- Phase 5 완료: 에이전트 감시 API (통계 조회)
+- Phase 5 FG5.3 완료: 에이전트 감사·통계 API 구현 완료
 - 백엔드 API 문서:
-  - `/api/v1/agents/stats` (GET) - 전체 에이전트 통계
-  - `/api/v1/agents/{id}/stats` (GET) - 개별 에이전트 통계
-  - `/api/v1/agents/stats/timeline` (GET, startDate, endDate) - 시계열 데이터
-  - `/api/v1/agents/{id}/block-history` (GET) - 킬스위치 히스토리
+  - `/api/v1/admin/agents/{id}/statistics` (GET) — **FG5.3 구현 완료**, 승인율·평균검토시간·반려사유
+  - `/api/v1/admin/agents/{id}/audit` (GET) — **FG5.3 구현 완료**, 감사 이벤트 이력 (날짜·이벤트 타입 필터, 페이지네이션)
+  - `/api/v1/admin/proposals/stats` (GET) — **FG5.2 구현 완료**, 전체 제안 통계
+  - `/api/v1/admin/proposals` (GET) — **FG5.2 구현 완료**, 전체 제안 목록 (에이전트·상태 필터)
+  - ⚠️ 시계열 데이터 API (`/api/v1/agents/stats/timeline`)는 미구현 — Task 6-8에서 `/admin/agents/{id}/statistics` + `/admin/proposals?agent_id=` 조합으로 대체하거나, 필요 시 백엔드 신규 엔드포인트 추가
+  - ⚠️ 킬스위치 히스토리 API (`/api/v1/agents/{id}/block-history`)는 미구현 — `GET /admin/agents/{id}/audit?action_type=agent.kill_switch_activated`로 필터링하여 대체
 - Next.js 16.2.2, React 19, TypeScript, Zustand, recharts, react-csv 설치 완료
 
 ## 4. 주요 작업 항목
@@ -767,8 +776,14 @@
 - [ ] 에이전트별 상세 통계 테이블 완성
   - [ ] 기본 통계 (총 제안, 승인, 거절, 승인률, 소요 시간)
   - [ ] 확장 정보 (거절 사유 상위 5개, 문서 타입)
+  - [ ] **[PH5-CARRY-001]** `GET /admin/agents/{id}/statistics` FG5.3 API 연동 확인
 - [ ] 이상 행동 알림 완성 (거절률 > 50%)
-- [ ] 킬스위치 히스토리 타임라인 완성
+- [ ] 킬스위치 히스토리 타임라인 완성 (`audit` API 필터링 방식)
+- [ ] **[PH5-CARRY-001] 감사 이력 탭 구현 완료**
+  - [ ] `GET /admin/agents/{id}/audit` API 연동
+  - [ ] 날짜 범위·이벤트 타입 필터 UI
+  - [ ] 페이지네이션 (page/page_size)
+  - [ ] `acting_on_behalf_of` 컬럼 표시
 - [ ] 날짜 범위 필터 완성
 - [ ] CSV Export 기능 완성
 - [ ] React Query polling (30초) 구현

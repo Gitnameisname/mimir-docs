@@ -35,10 +35,19 @@ Phase 3·4에서 이월된 항목 중 Phase 6에서 처리할 사항.
 |----|------|-----------|---------|-----------|
 | PH3-CARRY-002 | **대화 전문 FTS (tsvector)** — 대화 제목 LIKE 검색 → 전문 Full-Text Search 전환 | Phase 3 | 낮음 | Phase 6 검색 고도화 작업(FG6.x)에서 `conversations` 테이블에 `tsvector` 컬럼 추가 및 GIN 인덱스 생성, 검색 API 업데이트 |
 | DOCS-001 | **외부 클라이언트용 MCP 통합 가이드** — LangChain·n8n 등 외부 에이전트가 Mimir MCP Server를 도구로 연결하는 단독 가이드 문서 미산출 | Phase 4 | 중간 | FG6.2 에이전트 관리 UI 구축 시 함께 작성. 엔드포인트 목록·인증(API Key + `expires_at` 필수)·Tool Schema·연동 예시 코드 포함 → Task 6-5 산출물로 추가 |
+| PH5-CARRY-001 | **에이전트 감사 이력 UI** — `GET /admin/agents/{id}/audit` API는 FG5.3에서 구현 완료. Admin 대시보드에서 감사 이벤트를 테이블로 조회·필터링하는 UI가 미산출 | Phase 5 FG5.3 | 중간 | Task 6-8 (에이전트 활동 대시보드)에 **감사 이력 탭** 추가. `GET /admin/agents/{id}/audit` API 연동, 날짜·이벤트 타입 필터, 페이지네이션 포함 |
+| PH5-CARRY-002 | **에이전트별 Rate Limit 한도 동적 설정** — FG5.3에서 Valkey 기반 per-agent Rate Limit 카운터 구현 완료. 단, 한도 값이 코드에 하드코딩(`_AGENT_RATE_LIMITS` 딕셔너리). ScopeProfile 또는 에이전트 설정에서 관리자가 동적으로 한도를 설정하는 UI·API 미산출 | Phase 5 FG5.3 | 중간 | Task 6-5 (에이전트 관리 페이지) 에이전트 상세 보기에 **Rate Limit 설정 섹션** 추가. `GET /admin/agents/{id}/rate-limit` API로 현황 조회, 한도 수정 UI + 백엔드 연동 |
+| PH5-CARRY-003 | **1000개 이상 동시 제안 부하 테스트** — FG5.3 성능 테스트는 단위(인젝션 탐지 latency) 수준에서 수행. 동시 다수 에이전트 제안 처리 시 DB 인덱스·쿼리 성능은 미검증 | Phase 5 FG5.3 | 낮음 | Phase 6 배포 직전 Task 6-7 (에이전트 제안 큐) 완성 후 실행. `agent_proposals` 인덱스 확인, 대용량 큐 페이지네이션 성능 확인 |
 
 > **PH3-CARRY-002 상세**: 현재 `ConversationRepository.list()`의 제목 검색은 `LIKE '%{query}%'` 방식이다. 대화 수가 증가하면 성능 저하가 발생한다. `tsvector` 컬럼 + GIN 인덱스 기반 FTS로 전환하고, 검색 API(`GET /api/v1/conversations?search=`)도 함께 업데이트한다.
 
 > **DOCS-001 상세**: Phase 4 전체 검수에서 발견된 미산출 항목 (Phase4_전체검수보고서.md §7 DOCS-001). MCP Server 자체는 완성되었으나 외부 개발자를 위한 통합 가이드가 없다. FG4.1 검수보고서의 엔드포인트 표가 현행 대체 중이며, 에이전트 관리 UI 완성 시점에 맞춰 실제 연동 예시와 함께 완성하는 것이 효율적이다. **REC-4.3 영향**: Agent API Key는 반드시 `expires_at`을 명시해야 하며(NULL 시 인증 거부), 가이드에 이 제약을 필수로 기술해야 한다.
+
+> **PH5-CARRY-001 상세**: `GET /admin/agents/{id}/audit` 응답 필드: `id, event_type, occurred_at, actor_type, acting_on_behalf_of, resource_type, resource_id, previous_state, new_state, action_result, reason`. 날짜 필터(`start_date`, `end_date`)와 이벤트 타입 필터(`action_type`) 지원. 페이지네이션: `page`, `page_size`(max 100). Task 6-8 대시보드에 탭 형식으로 통합하는 것이 자연스럽다.
+
+> **PH5-CARRY-002 상세**: 현재 `backend/app/api/v1/mcp_router.py`의 `_AGENT_RATE_LIMITS` 딕셔너리(`tool_call=20, stream=10, read=60, init=30`)가 하드코딩되어 있다. S2 원칙 ⑤(접근 범위 하드코딩 금지)에 따라 관리자가 에이전트별로 한도를 조정할 수 있어야 한다. 백엔드 구현(DB 컬럼 또는 ScopeProfile 메타데이터 저장)과 UI 수정이 함께 필요하다.
+
+> **PH5-CARRY-003 상세**: FG5.3 `test_agent_performance.py`는 인젝션 탐지 latency만 검증했다. `agent_proposals` 테이블에 1000개 이상의 레코드가 있을 때 `GET /admin/proposals` 페이지네이션 응답 시간, `agent_proposals` 인덱스 효율성(agent_id, created_at, status), DB 커넥션 풀 처리를 검증해야 한다.
 
 ---
 

@@ -944,6 +944,23 @@
 - Diff 계산: 대용량 파일 시 웹 워커 활용
 - 실시간 업데이트: 백그라운드 리페치 (focus 감지)
 
+### 7-6 [PH5-CARRY-003] 배포 전 부하 테스트 — Phase 6 완료 후 필수 실행
+
+FG5.3 잔여 항목. Task 6-7 UI 완성 후, Phase 6 배포 전에 아래 시나리오를 실행해 `agent_proposals` 처리 성능을 검증한다.
+
+**테스트 시나리오**:
+1. `agent_proposals` 테이블에 1000건 이상의 레코드를 삽입한다.
+2. `GET /admin/proposals?page=1&page_size=50` 응답 시간 측정 → 목표 **< 500ms**
+3. `GET /admin/proposals?agent_id=X&status=pending` 복합 인덱스 효율 측정
+4. 동시 요청 10개 병렬 실행 → 오류 없이 처리되는가 확인
+
+**DB 인덱스 확인 포인트** (`backend/app/db/connection.py`):
+- `agent_proposals.agent_id` 인덱스 존재 여부
+- `agent_proposals.status` 인덱스 존재 여부
+- `agent_proposals.created_at DESC` 정렬 인덱스 존재 여부
+
+성능 미달 시 인덱스 추가 마이그레이션 DDL을 `connection.py`에 추가하고 재측정한다.
+
 ---
 
 **예상 소요 시간**: 40시간 (분석 8시간 + DiffView 개발 8시간 + 나머지 CRUD 16시간 + 실시간 구현 4시간 + 테스트 4시간)
