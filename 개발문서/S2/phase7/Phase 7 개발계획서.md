@@ -443,6 +443,43 @@ CI 파이프라인에 골든셋 회귀 테스트 잡을 추가하여, 품질 기
 
 ---
 
+## 3.5 이월 항목 (Phase 6 미결 사항)
+
+Phase 6 종결 시 처리되지 않은 항목으로, Phase 7에서 반드시 완료해야 한다.
+
+| ID | 원 Phase | 항목 | 우선순위 | 담당 Task |
+|----|---------|------|---------|----------|
+| PH6-CARRY-001 | Phase 6 FG6.2 | Batch 승인/거절 롤백 UI (AdminProposalsPage) | 중간 | task7-11 |
+| PH3-CARRY-002 | Phase 3 FG3.x | 대화 제목 검색 FTS 전환 (tsvector + GIN) | 낮음 | task7-10 |
+| PH5-CARRY-003 | Phase 5 FG5.x | 1000개 이상 제안 동시 부하 테스트 | 낮음 | task7-12 |
+
+### PH6-CARRY-001: Batch 승인/거절 롤백 UI
+- **내용**: AdminProposalsPage의 일괄 승인/거절 실행 후 일정 시간(30초) 내 되돌리기 가능한 Undo UI
+- **요구사항**: 
+  - BatchToolbar에 "되돌리기" 버튼 추가 (작업 완료 후 30초 표시)
+  - 백엔드 `POST /admin/proposals/batch-rollback` 엔드포인트 필요
+  - 이미 개별 처리된 제안은 롤백 불가 (상태 기반 판단)
+- **완료 기준**: 일괄 작업 후 30초 내 롤백 가능, 이후 버튼 사라짐
+
+### PH3-CARRY-002: 대화 FTS 전환
+- **내용**: `conversations` 테이블의 title 검색을 `ILIKE '%query%'` → `tsvector` + GIN 인덱스로 전환
+- **요구사항**:
+  - `conversations.title_tsv` tsvector 컬럼 추가 (자동 생성 트리거)
+  - GIN 인덱스: `CREATE INDEX CONCURRENTLY idx_conv_title_fts ON conversations USING GIN(title_tsv)`
+  - 검색 API: `to_tsquery()` 기반 쿼리로 전환, `ts_rank` 정렬
+  - 기존 API 응답 형식 변경 없음 (프론트엔드 수정 불필요)
+- **완료 기준**: 1만 건 이상 대화에서 검색 응답 50ms 이하
+
+### PH5-CARRY-003: 1000개 이상 제안 부하 테스트
+- **내용**: 배포 직전 실행하는 성능 검증 테스트 스크립트
+- **요구사항**:
+  - Locust 또는 k6 기반 스크립트 (`scripts/load_test_proposals.py`)
+  - 시나리오: 1000개 제안 동시 제출, P95 응답시간 ≤ 2s 확인
+  - 결과 리포트 자동 생성
+- **완료 기준**: 1000개 동시 제안에서 P95 ≤ 2s, 에러율 ≤ 1%
+
+---
+
 ## 4. 기술 설계 요약
 
 ### 4.1 평가 엔진 아키텍처
@@ -609,8 +646,12 @@ Phase 7 완료로 판단하는 조건:
 6. AI품질평가.md 자동 생성 템플릿 작성 및 테스트
 7. Phase 6 FG6.3 대시보드와의 데이터 바인딩 완성
 8. 평가 성능 시계열 데이터 수집 확인
-9. 모든 FG 검수보고서 및 보안취약점검사보고서 승인
-10. Phase 7 종결 보고서 작성 완료
+9. **이월 항목 완료**:
+   - PH3-CARRY-002: 대화 FTS 전환 완료 (ILIKE → tsvector)
+   - PH6-CARRY-001: Batch 롤백 UI 완료 (30초 Undo)
+   - PH5-CARRY-003: 부하 테스트 스크립트 작성 및 결과 보고
+10. 모든 FG + 이월 항목 검수보고서 및 보안취약점검사보고서 승인
+11. Phase 7 종결 보고서 작성 완료
 
 ---
 
@@ -628,8 +669,12 @@ Phase 7 완료로 판단하는 조건:
 6. FG7.3 CI 게이트 구축
 7. AI품질평가.md 생성 스크립트
 8. Phase 6 FG6.3 대시보드와의 데이터 바인딩
-9. 모든 FG 검수 및 보안 검사
-10. Phase 7 종결 보고서 작성
+9. **이월 항목 처리** (FG 완료 후 병행)
+   - PH3-CARRY-002: 대화 FTS 전환 (task7-10)
+   - PH6-CARRY-001: Batch 롤백 UI (task7-11)
+   - PH5-CARRY-003: 부하 테스트 스크립트 작성 (task7-12)
+10. 모든 FG + 이월 항목 검수 및 보안 검사
+11. Phase 7 종결 보고서 작성
 
 ---
 
