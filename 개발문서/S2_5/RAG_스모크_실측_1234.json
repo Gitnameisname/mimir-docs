@@ -1,0 +1,657 @@
+{
+  "run_at": "2026-04-22T14:29:44.974263+00:00",
+  "base_url": "http://localhost:8050",
+  "summary": {
+    "total": 21,
+    "positive_total": 18,
+    "negative_total": 3,
+    "retrieval_hit_rate": 0.0,
+    "citation_present_rate_positive": 0.0,
+    "avg_precision_at_k": 0.0,
+    "avg_keyword_coverage": 0.0,
+    "avg_latency_ms": 3470.1,
+    "errors": 21,
+    "multihop_total": 0,
+    "multihop_ok": 0,
+    "negative_total_met": 0,
+    "by_category": {
+      "simple": {
+        "n": 8,
+        "hit": 0,
+        "citation_present": 0
+      },
+      "ambiguous": {
+        "n": 4,
+        "hit": 0,
+        "citation_present": 0
+      },
+      "typed": {
+        "n": 3,
+        "hit": 0,
+        "citation_present": 0
+      },
+      "multihop": {
+        "n": 3,
+        "hit": 0,
+        "citation_present": 0
+      },
+      "negative": {
+        "n": 3,
+        "hit": 0,
+        "citation_present": 0
+      }
+    }
+  },
+  "seeded": [
+    {
+      "sample_id": "A1-POLICY-infosec-basic",
+      "title": "정보보안 기본 정책",
+      "document_type": "POLICY",
+      "document_id": "5b171f4a-2e32-412b-b888-04d69848ab87",
+      "version_id": "82e8a3ee-3030-48b1-9bea-3365da6fe72c",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "A2-POLICY-privacy",
+      "title": "개인정보 처리방침",
+      "document_type": "POLICY",
+      "document_id": "4b98c891-e9d5-47b3-bc9d-053877d2aebe",
+      "version_id": "0f802fcc-cf1c-45c2-9a5c-f7a2836a75ea",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "A3-MANUAL-password-reset",
+      "title": "패스워드 재설정 매뉴얼",
+      "document_type": "MANUAL",
+      "document_id": "d48b0726-ea5c-4854-b642-3dd1dd5deac1",
+      "version_id": "b390a50b-e2c1-420f-bb90-7f672e1c2e84",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "A4-MANUAL-incident-response",
+      "title": "보안 사고 대응 매뉴얼",
+      "document_type": "MANUAL",
+      "document_id": "7dfd800d-5cc6-4c9f-a448-4941a7a72d65",
+      "version_id": "f8993e7b-5a6c-4e2f-930a-7575f49263b4",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "A5-REPORT-q1-vuln",
+      "title": "2026 1분기 보안 취약점 현황 보고서",
+      "document_type": "REPORT",
+      "document_id": "684d9982-816a-4df0-bc4c-317480c130dc",
+      "version_id": "d8c49795-1a59-4398-9419-628bb4ec57c7",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "B1-POLICY-remote-work",
+      "title": "원격근무 정책",
+      "document_type": "POLICY",
+      "document_id": "4b8cf779-cf7c-4a81-8037-04563233c854",
+      "version_id": "ffa5b81b-8065-4fa5-a496-9bb3aaf5a6de",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "B2-POLICY-leave",
+      "title": "휴가 및 연차 관리 규정",
+      "document_type": "POLICY",
+      "document_id": "ef84e896-5b06-4ba6-a371-9817e4987f2c",
+      "version_id": "6d49d630-71e5-480b-b063-0097534f4a6f",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "B3-MANUAL-onboarding",
+      "title": "신입사원 온보딩 매뉴얼",
+      "document_type": "MANUAL",
+      "document_id": "4a621035-b620-4b9c-ad8c-99da04f89eca",
+      "version_id": "3c6088bc-ed1d-41de-a23a-d233ea343d43",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "B4-MANUAL-expense",
+      "title": "경비 정산 매뉴얼",
+      "document_type": "MANUAL",
+      "document_id": "fcc69af4-e233-4ca6-84c2-bf14ad67cd69",
+      "version_id": "f2716242-1c08-4a13-8bf1-ab47d7510e1b",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "C1-MANUAL-deploy",
+      "title": "배포 절차 매뉴얼",
+      "document_type": "MANUAL",
+      "document_id": "a983bed5-a391-4d34-8639-5065f0fead05",
+      "version_id": "91acf0e7-6da8-4d49-aaf5-b3acde1dda7c",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "C2-MANUAL-incident-playbook",
+      "title": "서비스 장애 대응 플레이북",
+      "document_type": "MANUAL",
+      "document_id": "5e10dd91-a9f3-4a9e-872f-c81d6109ec4e",
+      "version_id": "8c94c533-7e64-453a-9847-b707587058e6",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "C3-REPORT-q1-availability",
+      "title": "2026 1분기 인프라 가용성 보고서",
+      "document_type": "REPORT",
+      "document_id": "fe634714-25b6-4c30-ab98-634608ae41c1",
+      "version_id": "9ab30eae-e843-4fea-b4e3-0f8db86fe00e",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "C4-REPORT-mar-api-latency",
+      "title": "2026 3월 API 응답 지연 회고",
+      "document_type": "REPORT",
+      "document_id": "c0eccd4f-7b7c-43e6-a834-b5fda0b17c16",
+      "version_id": "dfcb8cfd-ec83-41e4-bd1d-98ece0d10501",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "D1-POLICY-budget",
+      "title": "경영비 집행 규정",
+      "document_type": "POLICY",
+      "document_id": "df6d1cce-d9c5-4024-a54a-f6a415a58fd4",
+      "version_id": "a595d7be-b033-47d3-bdef-2bd03d0e4316",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "D2-REPORT-q1-budget",
+      "title": "2026 1분기 예산 집행 현황",
+      "document_type": "REPORT",
+      "document_id": "e223352f-6f5b-4872-a622-9887dea2d949",
+      "version_id": "2773dc1f-2403-461a-a75b-8985003a454f",
+      "status": "published",
+      "errors": []
+    },
+    {
+      "sample_id": "D3-REPORT-depreciation",
+      "title": "월별 IT 자산 감가상각 보고서",
+      "document_type": "REPORT",
+      "document_id": "461b86f7-3656-46d3-bc09-d08b9a51c97e",
+      "version_id": "815a11a6-1ada-4b28-9b3e-c8c7270d1339",
+      "status": "published",
+      "errors": []
+    }
+  ],
+  "results": [
+    {
+      "id": "Q01",
+      "category": "simple",
+      "query": "패스워드는 몇 자 이상이어야 해?",
+      "expected_doc_ids": [
+        "A3-MANUAL-password-reset"
+      ],
+      "expected_keywords": [
+        "12자",
+        "조합"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 7392.333750001853,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"0170ac08-0c42-4163-ae18-4b7a44cabb2f\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q02",
+      "category": "simple",
+      "query": "원격근무는 주 며칠까지 가능해?",
+      "expected_doc_ids": [
+        "B1-POLICY-remote-work"
+      ],
+      "expected_keywords": [
+        "주 2일"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2186.2226669909433,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"4f4cf575-9c92-4f6c-9e0a-a57687e3a756\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q03",
+      "category": "simple",
+      "query": "배우자 출산 휴가는 며칠이야?",
+      "expected_doc_ids": [
+        "B2-POLICY-leave"
+      ],
+      "expected_keywords": [
+        "10일"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2324.8967499966966,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"09c7ab94-9bed-4d14-9eb4-088c573406b4\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q04",
+      "category": "simple",
+      "query": "국내 출장 숙박비 한도는 얼마야?",
+      "expected_doc_ids": [
+        "B4-MANUAL-expense"
+      ],
+      "expected_keywords": [
+        "15만원"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2288.053875003243,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"4ed8efcd-a3e2-4e8d-a3d6-7d9783d26950\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q05",
+      "category": "simple",
+      "query": "프로덕션 배포는 언제 할 수 있어?",
+      "expected_doc_ids": [
+        "C1-MANUAL-deploy"
+      ],
+      "expected_keywords": [
+        "화·목",
+        "10시",
+        "배포 윈도우"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2306.932624996989,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"17f232ee-ebf1-4d8a-90fc-b563c0d7eb23\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q06",
+      "category": "simple",
+      "query": "Sev1 장애 기준이 뭐야?",
+      "expected_doc_ids": [
+        "C2-MANUAL-incident-playbook"
+      ],
+      "expected_keywords": [
+        "서비스 불가",
+        "데이터 손실"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 7119.442374998471,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"7cecce6c-d549-4526-a7d3-a273dc4dc48f\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q07",
+      "category": "simple",
+      "query": "5,000만원 넘는 지출은 누가 승인해야 하지?",
+      "expected_doc_ids": [
+        "D1-POLICY-budget"
+      ],
+      "expected_keywords": [
+        "CEO"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2137.976541998796,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"5b189a26-bee4-47e2-8bee-56b4af49632f\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q08",
+      "category": "simple",
+      "query": "1분기 API 가용성은 얼마였어?",
+      "expected_doc_ids": [
+        "C3-REPORT-q1-availability"
+      ],
+      "expected_keywords": [
+        "99.94"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2402.356124992366,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"b19d3eb2-d99d-45ab-a943-eeea33d50843\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q09",
+      "category": "ambiguous",
+      "query": "보안 사고가 발생했을 때 72시간 안에 뭘 해야 돼?",
+      "expected_doc_ids": [
+        "A4-MANUAL-incident-response"
+      ],
+      "expected_keywords": [
+        "개인정보보호위원회",
+        "신고"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2218.462417004048,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"dc4e11c2-a695-4a6e-9602-7c1158248709\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q10",
+      "category": "ambiguous",
+      "query": "저장 데이터 암호화에 어떤 알고리즘을 써야 해?",
+      "expected_doc_ids": [
+        "A1-POLICY-infosec-basic"
+      ],
+      "expected_keywords": [
+        "AES-256"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2638.0154169892194,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"903aa95f-f77b-4be9-9418-c65b8d2ed057\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q11",
+      "category": "ambiguous",
+      "query": "3월 12일 DB 리플리카 장애의 근본 원인은 뭐였어?",
+      "expected_doc_ids": [
+        "C4-REPORT-mar-api-latency"
+      ],
+      "expected_keywords": [
+        "health check",
+        "구식"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 7264.771875008591,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"e6c30185-3747-4dec-ac92-701a02936480\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q12",
+      "category": "ambiguous",
+      "query": "500만원 넘는 지출은 누구한테 승인받아야 해?",
+      "expected_doc_ids": [
+        "D1-POLICY-budget"
+      ],
+      "expected_keywords": [
+        "CFO"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2261.346582992701,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"179bf574-d33a-491b-9823-8a7553743507\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q13",
+      "category": "typed",
+      "query": "신입사원이 첫 주에 반드시 이수해야 할 교육은?",
+      "expected_doc_ids": [
+        "B3-MANUAL-onboarding"
+      ],
+      "expected_keywords": [
+        "정보보안",
+        "개인정보보호",
+        "윤리"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2070.1802499970654,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"456ee5be-ac09-4c8c-a2d6-36b21d901313\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q14",
+      "category": "typed",
+      "query": "연차는 몇 일까지 이월되지?",
+      "expected_doc_ids": [
+        "B2-POLICY-leave"
+      ],
+      "expected_keywords": [
+        "5일"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2365.0555000058375,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"8b840c3c-6c6f-4965-a6a8-8b803a47971d\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q15",
+      "category": "typed",
+      "query": "3월 감가상각 총액이 얼마였어?",
+      "expected_doc_ids": [
+        "D3-REPORT-depreciation"
+      ],
+      "expected_keywords": [
+        "1억 8,420만원",
+        "9,600만원"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2069.1098749957746,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"d2827f5b-4c6b-448f-8de2-b5c8aa596d24\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q16",
+      "category": "multihop",
+      "query": "정보보안 정책의 핵심 통제 원칙을 접근통제와 암호화 관점에서 요약해줘",
+      "expected_doc_ids": [
+        "A1-POLICY-infosec-basic"
+      ],
+      "expected_keywords": [
+        "최소 권한",
+        "AES-256"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 7069.6027079975465,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"d4f41566-2a72-4c7c-a203-177a3d6f2910\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q17",
+      "category": "multihop",
+      "query": "Sev1 장애가 발생하면 심각도 분류부터 Post-Mortem까지 어떻게 진행해?",
+      "expected_doc_ids": [
+        "C2-MANUAL-incident-playbook"
+      ],
+      "expected_keywords": [
+        "15분",
+        "Post-Mortem",
+        "IC"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2503.119457993307,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"d78bb2d5-51f4-4c6f-9ce3-aefa5ee0e0dd\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q18",
+      "category": "multihop",
+      "query": "개인정보 수집부터 파기까지 보관 기간과 파기 방법을 알려줘",
+      "expected_doc_ids": [
+        "A2-POLICY-privacy"
+      ],
+      "expected_keywords": [
+        "3개월",
+        "5년",
+        "덮어쓰기"
+      ],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2108.1325419945642,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": false,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"ddf5e602-f103-40f4-9693-d57a9e4893ee\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q19",
+      "category": "negative",
+      "query": "회사 창립 기념일은 언제야?",
+      "expected_doc_ids": [],
+      "expected_keywords": [],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2313.168708991725,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": true,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"b8ec0251-f56e-41de-9b7a-4d8f56820a94\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q20",
+      "category": "negative",
+      "query": "CEO의 개인 취미는 뭐야?",
+      "expected_doc_ids": [],
+      "expected_keywords": [],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 2415.1058749994263,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": true,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"1ebccf77-5219-4333-b32c-9e487ddbeda4\",\"trace_id\":null}}"
+    },
+    {
+      "id": "Q21",
+      "category": "negative",
+      "query": "2025년 4분기 프로덕션 장애 총 건수와 다운타임 합계를 알려줘",
+      "expected_doc_ids": [],
+      "expected_keywords": [],
+      "citations": [],
+      "answer": "",
+      "latency_ms": 7417.015875005745,
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 0.0,
+      "min_citations_from_doc_met": null,
+      "expect_no_answer": true,
+      "negative_ok": null,
+      "error": "API error 500 on http://localhost:8050/api/v1/rag/answer: {\"error\":{\"code\":\"internal_server_error\",\"message\":\"예기치 않은 오류가 발생했습니다\",\"details\":null},\"meta\":{\"request_id\":\"f2cced68-7f34-448e-8117-410b8485e550\",\"trace_id\":null}}"
+    }
+  ]
+}

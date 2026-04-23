@@ -78,16 +78,18 @@
 
 ## 본 리뷰에서 추가로 관찰된 파생 이슈(범위 밖, 후속 태스크로 분리)
 
-- **#31 — 목록 에러 배너가 모든 실패를 "S2 ⑥" 으로 표기**
+- **#31 — 목록 에러 배너가 모든 실패를 "S2 ⑥" 으로 표기** _(RESOLVED 2026-04-21)_
   현재 `AdminGoldenSetsPage` 의 `errorMessage` 렌더 블록은 HTTP 상태와 무관하게 "Scope Profile 바인딩 또는 권한을 확인해 주세요. (S2 ⑥)" 안내를 함께 출력한다. R4 의 503 케이스처럼 서버 측 버그도 S2 ⑥ 로 오해될 수 있음. 후속에서 상태 코드별(403 → S2 ⑥ / 5xx → 일시 장애 재시도 유도 / 네트워크 실패 → 연결 안내) 분기 필요. 본 PR 에서는 중요도 낮음(근본 버그 #30 이 해소되어 빈도 최소화).
-- **503 → 500 매핑 차이**
+  → 해소: `classifyListError` 헬퍼로 HTTP 상태·에러 타입별 분기 구현. 네트워크/403/5xx 3 시나리오 Chrome 런타임 검증 완료. 세부는 `docs/개발문서/S2_5/UI_Admin_GoldenSets_P1_31_에러배너분기.md` 참조.
+- **#32 — 503 → 500 매핑 차이** _(RESOLVED 2026-04-21)_
   `ValueError` 가 전역 핸들러에서 500 이 아닌 503 으로 매핑되는 경로는 `unhandled_exception_handler` + slowapi 와의 상호작용으로 추정되며, 운영 안정성 관점에서 별도 조사 필요. 본 리뷰 이후 후속으로 분리.
+  → 조사 결론: 코드 경로 재구성 결과 `ValueError` 는 `Exception` catch-all 을 통해 **항상 500** 으로 매핑되는 것이 유일한 정상 경로이며, 503 을 생성할 수 있는 코드는 존재하지 않음(슬로우API 는 `swallow_errors=True`, `ApiServiceUnavailableError` 는 raise site 0건). R4 의 503 관측은 오관측(오타/uvicorn --reload 일시 상태/캐시된 응답) 가능성이 가장 높음. 계약 고정을 위해 `backend/tests/unit/test_unhandled_exception_mapping.py` (ValueError/RuntimeError/TypeError/KeyError → 500, `ApiServiceUnavailableError` → 503, typed ApiError → 지정 상태) 회귀 테스트 추가. 세부는 `docs/개발문서/S2_5/UI_Admin_GoldenSets_ValueError_500_503_매핑조사.md` 참조.
 
 ---
 
 ## 정리 작업
 
-- 리뷰 중 생성한 테스트 row **"S2-5 회귀 테스트 골든셋"** 은 회귀 재현용으로만 사용되었으며, 실데이터가 아님. 수동 삭제 필요(`DELETE /api/v1/golden-sets/{id}` 또는 상세 패널 "삭제" 액션).
+- ~~리뷰 중 생성한 테스트 row **"S2-5 회귀 테스트 골든셋"** 은 회귀 재현용으로만 사용되었으며, 실데이터가 아님. 수동 삭제 필요(`DELETE /api/v1/golden-sets/{id}` 또는 상세 패널 "삭제" 액션).~~ → **완료 2026-04-21**: AdminGoldenSetsPage 상세 패널에 "위험 구역 / 골든셋 삭제…" 버튼 + type-to-confirm 모달(#33) 을 추가하고, 실제 DELETE 경로로 삭제 완료. 동시에 4 가지 에러 분기(403/404/5xx/network)를 fetch mock 으로 검증. 세부는 `docs/개발문서/S2_5/UI_Admin_GoldenSets_P2_33_삭제버튼.md` 참조.
 
 ---
 
@@ -97,7 +99,7 @@
 - R4 에서 **P0 #30 (`item_count` 필드 누락)** 을 실측으로 발견·수정하여, 생성 후 즉시 목록 재조회가 정상 동작함을 확인.
 - 와이어링 트랙 #21 / #22 / #28 / #29 / #30 전부 브라우저에서 의도대로 동작.
 - **후속**:
-  1. #31 상태 코드별 에러 배너 분기(중요도 낮음, 체감 UX 개선)
-  2. 500/503 매핑 정상화 조사
-  3. 테스트 row 삭제
+  1. ~~#31 상태 코드별 에러 배너 분기(중요도 낮음, 체감 UX 개선)~~ → **완료 2026-04-21** (`UI_Admin_GoldenSets_P1_31_에러배너분기.md`)
+  2. ~~500/503 매핑 정상화 조사~~ → **완료 2026-04-21** (`UI_Admin_GoldenSets_ValueError_500_503_매핑조사.md` / 계약 테스트 `backend/tests/unit/test_unhandled_exception_mapping.py`)
+  3. ~~테스트 row 삭제~~ → **완료 2026-04-21** (#33 삭제 버튼 구현과 함께 처리. `UI_Admin_GoldenSets_P2_33_삭제버튼.md` 참조)
   4. `DataTable` 키보드 이벤트·`item_count` 모델 필드에 대한 유닛 테스트 추가(S2 종결 P0 커버리지 갭 해소의 일부)
