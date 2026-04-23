@@ -167,6 +167,7 @@ S2 재검수 2026-04-18 보고서가 명시한 P0 3건 + 인계 P0 1건을 Phase
 | 0-2 | embedding_dim 자동 검증 | Alembic revision에서 config와 `document_chunks` vector 차원 자동 비교, 불일치 시 revision 실패. 기동 시 헬스체크에도 포함 |
 | 0-3 | 테스트 커버리지 80% 복구 | 서비스/리포지토리 중심, 35.44% → 80%. 커버리지 리포트는 CI artifact로 보관 |
 | 0-4 | AI 품질 실측 — 골든셋 50+ | `scripts/rag_smoke/golden_queries.py`를 기반으로 50건 이상으로 확장. Faithfulness ≥ 0.80, Citation-present ≥ 0.90 실측 확보. 판정 LLM은 폐쇄망 호환(로컬 모델 사용 가능) |
+| 0-5 | 문서별 벡터화 상태 가시성 + 재벡터화 버튼 | 문서 상세에 상태 뱃지(indexed/stale/failed/…) + Admin·작성자용 재벡터화 버튼. 조용한 실패(publish 성공·벡터화 실패) 재발 방지 (2026-04-23 실사례) |
 
 ### Phase 1 — 에디터 모드 토글 (Phase 0 후 착수)
 

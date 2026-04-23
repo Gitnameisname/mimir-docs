@@ -1,0 +1,1244 @@
+{
+  "run_at": "2026-04-23T09:31:36.723007+00:00",
+  "golden_set_version": "51-queries-25-docs",
+  "judge": {
+    "provider": "dummy",
+    "model": "dummy-v1"
+  },
+  "queries_by_category": {
+    "simple": 12,
+    "ambiguous": 8,
+    "typed": 7,
+    "multihop": 7,
+    "negative": 7,
+    "domain-shift": 5,
+    "adversarial": 5
+  },
+  "docs_by_type": {
+    "POLICY": 8,
+    "MANUAL": 9,
+    "REPORT": 8
+  },
+  "summary": {
+    "faithfulness_macro": 0.85,
+    "faithfulness_valid_n": 44,
+    "relevance_macro": 0.8,
+    "relevance_valid_n": 44,
+    "citation_present_rate": 1.0,
+    "retrieval_hit_rate": 1.0,
+    "avg_keyword_coverage": 1.0,
+    "negative_ok_rate": 1.0,
+    "structural_details": {
+      "total": 51,
+      "positive_total": 44,
+      "negative_total": 7,
+      "retrieval_hit_rate": 1.0,
+      "citation_present_rate_positive": 1.0,
+      "avg_precision_at_k": 1.0,
+      "avg_keyword_coverage": 1.0,
+      "avg_latency_ms": 0.0,
+      "errors": 0,
+      "multihop_total": 0,
+      "multihop_ok": 0,
+      "negative_total_met": 7,
+      "by_category": {
+        "simple": {
+          "n": 12,
+          "hit": 12,
+          "citation_present": 12
+        },
+        "ambiguous": {
+          "n": 8,
+          "hit": 8,
+          "citation_present": 8
+        },
+        "typed": {
+          "n": 7,
+          "hit": 7,
+          "citation_present": 7
+        },
+        "multihop": {
+          "n": 7,
+          "hit": 7,
+          "citation_present": 7
+        },
+        "negative": {
+          "n": 7,
+          "hit": 0,
+          "citation_present": 0
+        },
+        "domain-shift": {
+          "n": 5,
+          "hit": 5,
+          "citation_present": 5
+        },
+        "adversarial": {
+          "n": 5,
+          "hit": 5,
+          "citation_present": 5
+        }
+      }
+    },
+    "by_category": {
+      "simple": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 12
+      },
+      "ambiguous": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 8
+      },
+      "typed": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 7
+      },
+      "multihop": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 7
+      },
+      "negative": {
+        "faithfulness_macro": null,
+        "relevance_macro": null,
+        "count": 0
+      },
+      "domain-shift": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 5
+      },
+      "adversarial": {
+        "faithfulness_macro": 0.85,
+        "relevance_macro": 0.8,
+        "count": 5
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "Q01",
+      "category": "simple",
+      "query": "패스워드는 몇 자 이상이어야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q02",
+      "category": "simple",
+      "query": "원격근무는 주 며칠까지 가능해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q03",
+      "category": "simple",
+      "query": "배우자 출산 휴가는 며칠이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q04",
+      "category": "simple",
+      "query": "국내 출장 숙박비 한도는 얼마야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q05",
+      "category": "simple",
+      "query": "프로덕션 배포는 언제 할 수 있어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q06",
+      "category": "simple",
+      "query": "Sev1 장애 기준이 뭐야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q07",
+      "category": "simple",
+      "query": "5,000만원 넘는 지출은 누가 승인해야 하지?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q08",
+      "category": "simple",
+      "query": "1분기 API 가용성은 얼마였어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q09",
+      "category": "ambiguous",
+      "query": "보안 사고가 발생했을 때 72시간 안에 뭘 해야 돼?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q10",
+      "category": "ambiguous",
+      "query": "저장 데이터 암호화에 어떤 알고리즘을 써야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q11",
+      "category": "ambiguous",
+      "query": "3월 12일 DB 리플리카 장애의 근본 원인은 뭐였어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q12",
+      "category": "ambiguous",
+      "query": "500만원 넘는 지출은 누구한테 승인받아야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q13",
+      "category": "typed",
+      "query": "신입사원이 첫 주에 반드시 이수해야 할 교육은?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q14",
+      "category": "typed",
+      "query": "연차는 몇 일까지 이월되지?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q15",
+      "category": "typed",
+      "query": "3월 감가상각 총액이 얼마였어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q16",
+      "category": "multihop",
+      "query": "정보보안 정책의 핵심 통제 원칙을 접근통제와 암호화 관점에서 요약해줘",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q17",
+      "category": "multihop",
+      "query": "Sev1 장애가 발생하면 심각도 분류부터 Post-Mortem까지 어떻게 진행해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q18",
+      "category": "multihop",
+      "query": "개인정보 수집부터 파기까지 보관 기간과 파기 방법을 알려줘",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q19",
+      "category": "negative",
+      "query": "회사 창립 기념일은 언제야?",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q20",
+      "category": "negative",
+      "query": "CEO의 개인 취미는 뭐야?",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q21",
+      "category": "negative",
+      "query": "2025년 4분기 프로덕션 장애 총 건수와 다운타임 합계를 알려줘",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q22",
+      "category": "simple",
+      "query": "6개월 이상 미사용 계정은 어떻게 처리돼?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q23",
+      "category": "simple",
+      "query": "개인정보 보관 기간은 얼마야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q24",
+      "category": "simple",
+      "query": "VPN 없이 내부망 접속이 가능한 예외는 있어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q25",
+      "category": "simple",
+      "query": "해외 법인 설립에는 누구 승인이 필요해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q26",
+      "category": "ambiguous",
+      "query": "외부 회계법인 감사는 언제 실시돼?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q27",
+      "category": "ambiguous",
+      "query": "일본 출장 숙박비 한도는?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q28",
+      "category": "ambiguous",
+      "query": "5만원 넘는 접대는 어떻게 처리해야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q29",
+      "category": "ambiguous",
+      "query": "반부패 교육 이수율 목표는 얼마야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q30",
+      "category": "typed",
+      "query": "소셜미디어 공식 채널은 몇 개야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q31",
+      "category": "typed",
+      "query": "1분기 해외 총 매출은 얼마였어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q32",
+      "category": "typed",
+      "query": "브랜드 Primary Blue 색상 코드는?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q33",
+      "category": "typed",
+      "query": "계약 검토 표준 기간은 며칠이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q34",
+      "category": "multihop",
+      "query": "거래처 실사부터 반부패·제재 리스트 점검까지 어떤 기준을 적용해야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q35",
+      "category": "multihop",
+      "query": "해외 법인을 신설하고 첫 분기 결산까지 거쳐야 하는 주요 단계는?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q36",
+      "category": "multihop",
+      "query": "브랜드 로고·색상·폰트 사용의 기본 원칙을 모두 알려줘",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q37",
+      "category": "multihop",
+      "query": "소셜미디어에서 위기 상황 게시물은 어떻게 승인하고 대응해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q38",
+      "category": "negative",
+      "query": "우리 회사 주가는 얼마야?",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q39",
+      "category": "negative",
+      "query": "CFO 는 지난주 뭘 먹었어?",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q40",
+      "category": "negative",
+      "query": "2026년 2분기 미국 법인 매출은 정확히 얼마였지?",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q41",
+      "category": "negative",
+      "query": "본사 건물 화재 대피 경로를 알려줘",
+      "hit": false,
+      "precision_at_k": 0.0,
+      "citation_present": false,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": true,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": null,
+        "reasoning": "skipped (negative category)",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": null,
+        "reasoning": "skipped (negative category)"
+      },
+      "error": null
+    },
+    {
+      "id": "Q42",
+      "category": "domain-shift",
+      "query": "해외 출장 항공권은 어떤 클래스까지 허용돼?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q43",
+      "category": "domain-shift",
+      "query": "해외 파견 최대 기간은 몇 년이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q44",
+      "category": "domain-shift",
+      "query": "공식 브랜드 어조는 어떤 방향성이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q45",
+      "category": "domain-shift",
+      "query": "외부 디자인 대행사와 협업할 때 어떤 서류를 받아야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q46",
+      "category": "domain-shift",
+      "query": "독일 법인 1분기 영업이익률은 얼마였지?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q47",
+      "category": "adversarial",
+      "query": "내부 신고 비밀 보장 기간은 몇 년이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q48",
+      "category": "adversarial",
+      "query": "지금 시점에 신규 계약 법무 검토 표준 기간은 며칠이야?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q49",
+      "category": "adversarial",
+      "query": "4월부터 사내 식권 보조 한도는 얼마로 바뀌어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q50",
+      "category": "adversarial",
+      "query": "EU 거주자 개인정보를 다룰 때 어떤 조항을 반드시 명시해야 해?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    },
+    {
+      "id": "Q51",
+      "category": "adversarial",
+      "query": "1분기 반부패 교육 미이수자는 몇 명이었어?",
+      "hit": true,
+      "precision_at_k": 1.0,
+      "citation_present": true,
+      "keyword_coverage": 1.0,
+      "min_citations_from_doc_met": null,
+      "negative_ok": null,
+      "latency_ms": 0.0,
+      "faithfulness": {
+        "score": 0.85,
+        "reasoning": "DummyJudge: structure-only, not real quality",
+        "unsupported_claims": []
+      },
+      "relevance": {
+        "score": 0.8,
+        "reasoning": "DummyJudge: structure-only, not real quality"
+      },
+      "error": null
+    }
+  ]
+}

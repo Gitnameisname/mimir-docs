@@ -181,6 +181,96 @@ Phase 0는 **방어적 구간**이다. 기능을 추가하지 않고 "이미 있
 
 ---
 
+### FG 0-5 — 문서별 벡터화 상태 가시성 + 재벡터화 버튼
+
+**목적**: 현재 publish 시 자동 벡터화가 비동기로 큐잉되지만, 실패 시 주 요청은 성공으로 반환되고 실패는 로그로만 남아 **"publish는 성공인데 RAG는 못 찾는" 조용한 실패** 상태가 누적된다. 이를 **문서 상세 페이지에서 즉시 인지하고 재시도할 수 있게** 한다. S3 Phase 0의 기반 부채 정리 의도와 일치한다 (2026-04-23 실사례 — RAG가 문서를 찾지 못한 원인을 탐지/복구할 수단이 없었음).
+
+**주요 작업**:
+
+1. 상태 조회 API 신설
+   - `GET /api/v1/vectorization/documents/{document_id}/status`
+   - 응답 스키마 (예시):
+     ```jsonc
+     {
+       "document_id": "...",
+       "latest_published_version_id": "...",
+       "indexed_version_id": "...",
+       "status": "indexed" | "pending" | "in_progress" | "failed" | "stale" | "not_applicable",
+       "chunk_count": 42,
+       "last_vectorized_at": "2026-04-23T07:00:00+00:00",
+       "last_error": null | "MilvusConnectionError: ...",
+       "can_reindex": true,        // actor 권한 판정 결과
+       "reindex_cooldown_sec": 0   // 남은 쿨다운(서버 rate limit 반영)
+     }
+     ```
+   - 상태 판정 로직:
+     - `not_applicable`: 발행된 버전이 없음
+     - `pending`: 발행됐으나 청크 0건 · 실패 로그 없음
+     - `in_progress`: 현재 스레드 풀에서 실행 중 (짧게만 관찰됨; best-effort)
+     - `failed`: 최근 실패 로그 존재
+     - `stale`: `latest_published_version_id != indexed_version_id`
+     - `indexed`: 위 외 정상
+
+2. 재벡터화 트리거 API 확장 (기존 `POST /api/v1/vectorization/documents/{document_id}` 재사용)
+   - 권한 확장: 기존 Admin-only → **Admin + `documents.created_by == actor.user_id`**
+   - 서버측 쿨다운: 문서당 10초 (동일 사용자 연속 클릭 방지). 쿨다운 위반 시 429 + `Retry-After`
+   - `actor_type` 을 audit_logs 에 기록 (S2 ⑤ 원칙)
+
+3. 프런트엔드: 문서 상세 페이지 **벡터화 패널**
+   - 위치: 문서 상세 상단(헤더 우측) 또는 사이드 패널 (UI 리뷰로 결정)
+   - 표시 요소:
+     - 상태 뱃지 색: `indexed`=green, `stale`=amber, `pending`=gray, `in_progress`=blue(spin), `failed`=red, `not_applicable`=neutral
+     - 마지막 성공 시각 (local tz + relative)
+     - 청크 수
+     - `failed` 시 에러 요약 1줄 (긴 스택은 details 토글)
+   - **재벡터화 버튼**:
+     - `can_reindex=true` 인 경우에만 활성화
+     - 클릭 → 확인 모달 → API 호출
+     - 실행 중에는 spinner + 버튼 비활성
+     - 쿨다운 중: tooltip 으로 남은 초 표시
+   - 상태 자동 갱신: 버튼 클릭 후 2초 폴링 (최대 60초). WebSocket 미도입.
+   - 접근성: 버튼 aria-label / 상태 aria-live="polite"
+   - UI 디자인 리뷰 **≥ 5회** (CLAUDE.md UI 규칙)
+
+4. MCP Tool 표면 확장 (S2 ⑤ 일관성)
+   - 에이전트가 문서의 벡터화 상태를 조회할 수 있도록 Tool 추가: `mimir.vectorization.status(document_id)`
+   - 재벡터화 실행은 Tool 에 노출하지 않음 (운영 안전 — 사람 명시적 클릭만)
+
+5. 회귀 테스트
+   - 상태 판정 분기 유닛 테스트 ≥ 8건 (각 status 케이스)
+   - 권한 테스트: admin / 작성자 / 제3자 각각 응답
+   - 쿨다운 테스트: 연속 호출 시 429
+   - FG 0-1 통합 시나리오 IT-02 확장: publish → status=pending → 완료 대기 → status=indexed
+
+6. 폐쇄망 안전 (S2 ⑦)
+   - Milvus · 임베딩 서비스 off 상태에서 상태 조회는 **정상 동작**해야 한다 (마지막 성공 시각만으로 구성 가능한 필드는 유지)
+   - 재벡터화 버튼 클릭 시 서비스 down 이 감지되면 `status=failed` + `last_error` 에 의존 서비스 명시
+
+**입력**:
+- 기존 `app/api/v1/vectorization.py` (stats, reindex 엔드포인트 재사용 기반)
+- 기존 `app/services/vectorization_service.py` (파이프라인)
+- 기존 `workflow.py:_trigger_vectorization_async` (큐잉 경로 재사용)
+- `documents.created_by`, `audit_logs`, `document_chunks`
+
+**출력**:
+- 백엔드: 상태 조회 라우트 + 권한 확장 + 쿨다운
+- 프런트엔드: 벡터화 패널 컴포넌트
+- MCP Tool: `mimir.vectorization.status`
+- 작업지시서: `task0-5.md`
+- 검수보고서: `docs/개발문서/S3/phase0/산출물/FG0-5_검수보고서.md`
+- 보안취약점검사보고서: `docs/개발문서/S3/phase0/산출물/FG0-5_보안취약점검사보고서.md`
+- UI 디자인 리뷰 로그: `docs/개발문서/S3/phase0/산출물/FG0-5_UI리뷰로그.md`
+
+**완료 기준**:
+- 모든 published 문서에 대해 상태 API가 정상 응답
+- 권한 확장(Admin + 작성자) 동작 + 제3자 403
+- 재벡터화 버튼 클릭 시 실제 파이프라인 트리거 확인
+- 쿨다운 429 동작
+- UI 디자인 리뷰 ≥ 5회 로그
+- 회귀 테스트 ≥ 12건 녹색
+
+---
+
 ## 3. Phase 0 산출물 규약 강화
 
 S3 전체 산출물 규약 위에, Phase 0는 다음을 추가 의무로 한다:
@@ -198,13 +288,15 @@ S3 전체 산출물 규약 위에, Phase 0는 다음을 추가 의무로 한다:
 | `task0-2.md` | 0-2 | embedding_dim config ↔ DB 스키마 자동 검증 |
 | `task0-3.md` | 0-3 | 테스트 커버리지 35% → 80% 복구 |
 | `task0-4.md` | 0-4 | AI 품질 실측 — 골든셋 50+ |
+| `task0-5.md` | 0-5 | 문서별 벡터화 상태 가시성 + 재벡터화 버튼 |
 
 ---
 
 ## 5. Phase 0 완료 기준 (게이트)
 
-- [ ] FG 0-1 / 0-2 / 0-3 / 0-4 각 FG의 검수·보안 보고서 제출
+- [ ] FG 0-1 / 0-2 / 0-3 / 0-4 / 0-5 각 FG의 검수·보안 보고서 제출
 - [ ] FG 0-4 AI 품질 평가 보고서 제출 (Faithfulness ≥ 0.80, Citation-present ≥ 0.90 실측 포함)
+- [ ] FG 0-5 UI 디자인 리뷰 ≥ 5회 로그 제출
 - [ ] CI 녹색 3회 연속
 - [ ] 커버리지 ≥ 80% (서비스/리포지토리)
 - [ ] Alembic embedding_dim 검증 revision 머지
