@@ -181,6 +181,74 @@
     - `AuditActorType = Literal["user", "agent", "system"]` 타입 alias 도 함께 export — 호출자가 타입 힌트 사용 가능.
     - **보안 시맨틱**: SERVICE → "system" 회귀 가드 테스트 필수 (`test_service_never_returns_service_literal`).
 
+### 1.7-fg31 `app.audit.viewed_throttle` ✅ (S3 Phase 3 FG 3-1, 2026-04-27)
+
+- `should_emit_view(actor_id: str | None, document_id: str) -> bool` ✅
+  - status: ✅ Existing (2026-04-27 task3-1 Step 1 신설)
+  - purpose: `document.viewed` audit emit 의 per (actor_id, document_id) 5분 윈도우 dedup. Contributors 패널 (FG 3-1) viewers 섹션 정확도와 audit_events 폭주 사이의 절충.
+  - effects: in-process LRU 캐시 갱신 (외부 I/O 없음)
+  - errors: none — 잘못된 환경변수는 default 로 fallback
+  - source: `backend/app/audit/viewed_throttle.py`
+  - tests: `backend/tests/unit/audit/test_viewed_throttle.py` (16 case — 첫 호출 / 윈도우 안 dedup / 다른 actor·document / anonymous / 빈 document_id / 윈도우 만료 / 윈도우 0 disable / 잘못된 env / 음수 / LRU eviction / max_entries env / thread-safe)
+  - 사용지 (call sites):
+    - `backend/app/api/v1/documents.py` `get_document` — `GET /api/v1/documents/{id}` 진입 시 호출 후 True 면 `audit_emitter.emit_for_actor(event_type="document.viewed", ...)`
+  - configuration:
+    - `AUDIT_VIEWED_DEDUP_WINDOW_SEC` (기본 300, 0 = dedup off)
+    - `AUDIT_VIEWED_DEDUP_MAX_ENTRIES` (기본 5000, LRU 상한)
+  - notes:
+    - **다중 워커 미지원**: 워커별 독립 LRU. Strict cluster-wide dedup 은 별 라운드 (Valkey 도입 후).
+    - thread-safe (단일 `threading.Lock`).
+    - `actor_id=None` (anonymous) 또는 `document_id` 비어있으면 항상 False — emit 자체를 막는 가드.
+    - **테스트 격리**: `viewed_throttle.reset_for_tests()` 로 캐시 비움. 운영 코드에서 호출 금지.
+    - 산출물 `docs/개발문서/S3/phase3/산출물/FG3-1_audit이벤트_실측.md` §3 의 정책 결정에 따름.
+
+### 1.7-fg32 `app.services.scope_profile_policy` ✅ (S3 Phase 3 FG 3-2, 2026-04-27)
+
+- `should_expose_viewers(viewer_actor: ActorContext | None) -> bool` ✅
+  - status: ✅ Existing (2026-04-27 task3-2 신설)
+  - purpose: viewer 의 ScopeProfile.settings.expose_viewers 를 fail-closed 로 반환. Contributors 패널 (FG 3-1) viewers 섹션 노출 정책 게이트.
+  - effects: DB read (1 회 SELECT — TTL 캐시 우선) + process-local 캐시 갱신
+  - errors: none — 모든 실패 (None / 미인증 / scope_profile_id 누락 / DB 장애 / 파싱 실패) 가 False 반환
+  - source: `backend/app/services/scope_profile_policy.py`
+  - tests: `backend/tests/unit/test_scope_profile_policy_fg32.py` (14 case — None / 미인증 / scope_profile_id 누락·빈문자 / settings true·false / not-found fail-closed / DB 장애 fail-closed / 캐시 hit / invalidate specific·all / TTL 0 disable / 잘못된 env)
+  - 사용지:
+    - `backend/app/services/contributors_service.get_contributors` — `effective_include_viewers = include_viewers AND should_expose_viewers(viewer_actor)`
+  - configuration:
+    - `SCOPE_PROFILE_POLICY_CACHE_TTL_SEC` (기본 30, 0 = no cache)
+  - notes:
+    - **fail-closed**: 모든 실패 분기가 False 반환. 정책 데이터를 읽지 못하면 viewers 차단.
+    - **다중 워커 미지원**: process-local 캐시. 다른 워커는 TTL 까지 stale. cluster-wide invalidation 은 별 라운드.
+    - **invalidation**: `invalidate_cache(scope_profile_id)` 또는 `invalidate_cache()` 전체. admin PATCH `/scope-profiles/{id}` 가 settings 변경 시 즉시 호출.
+    - 향후 다른 정책 키 (allow_agent_actions 등) 추가 시 본 모듈에 함수 추가하고 contributors_service / 다른 호출자가 사용.
+
+### 1.7-fg33 `app.services.notifications_service` ✅ (S3 Phase 3 FG 3-3, 2026-04-27)
+
+- `notifications_service.enqueue_mention(...)` ✅
+  - status: ✅ Existing (2026-04-27 task3-3 신설)
+  - purpose: annotation.mention 알림 enqueue. self-mention skip + per (author, recipient) 분당 5건 rate-limit.
+  - effects: DB INSERT (notifications)
+  - errors: silent skip 시 None 반환 (raise 없음)
+  - source: `backend/app/services/notifications_service.py`
+  - tests: `backend/tests/unit/test_notifications_service_fg33.py` (14 case)
+  - configuration:
+    - `ANNOTATION_MENTION_RATE_LIMIT_PER_MIN` (기본 5, 0 = disable)
+  - 사용지: `services/annotations_service.py` `create_annotation` / `update_content` (신규 멘션 차이만 enqueue)
+
+- `notifications_service.list_for_user / mark_read / count_unread` ✅
+  - 본인 알림만 조회 / 읽음 처리. SQL 안 user_id 필터로 우회 차단.
+
+### 1.7-fg33 `app.services.snapshot_sync_service.rebuild_annotation_anchoring` ✅ (S3 Phase 3 FG 3-3, 2026-04-27)
+
+- `rebuild_annotation_anchoring(conn, document_id, snapshot) -> tuple[int, int]` ✅
+  - status: ✅ Existing (2026-04-27 task3-3 신설)
+  - purpose: snapshot 의 live node_id 집합을 추출해 annotations 의 orphan 상태 재계산.
+    살아있지 않은 node_id → orphan, 다시 등장한 → 복구.
+  - effects: db_write (UPDATE annotations)
+  - errors: 호출자 트랜잭션에 자연 전파
+  - source: `backend/app/services/snapshot_sync_service.py`
+  - tests: `backend/tests/unit/test_annotation_anchoring_fg33.py` (5 case)
+  - 호출 시점: `draft_service.save_draft` / `agent_proposal_service.propose_draft` 트랜잭션 안 (rebuild_nodes_from_snapshot + rebuild_tags_for_document 직후).
+
 ### 1.7-extension `app.audit.emitter` ContextVar (R9, 2026-04-25)
 
 - `set_trace_id(trace_id) -> Token` / `reset_trace_id(token)` / `current_trace_id() -> str | None` ✅
@@ -295,8 +363,58 @@
 
 ---
 
+## 1.10+ 2회차 감사 신규 후보 (2026-04-25, 감사 2회차)
+
+### 1.10 `app.utils.actor` 확장 — 권한 가드 ✅ (BE-G6, 2026-04-25)
+
+- `require_actor_id(actor: ActorContext | None, *, label: str = "사용자") -> str` ✅
+  - status: ✅ Existing (2026-04-25 BE-G6 승격)
+  - purpose: 인증된 actor 의 ``actor_id`` 보장 + 반환. folders/collections `_require_actor` 본문 100% 동일을 통합.
+  - effects: none (raise 만)
+  - errors: `ApiValidationError(f"인증된 {label}만 작업을 수행할 수 있습니다")`
+  - source: `backend/app/utils/actor.py`
+  - tests: `backend/tests/unit/utils/test_actor.py` `TestRequireActorId` (6 case — 인증 정상 / None / anonymous / label / keyword-only / str 반환)
+  - replaced in: `app/services/folders_service.py` + `app/services/collections_service.py` `_require_actor` (thin wrapper 위임). 메시지 가시 변경 (도메인 helper 표준 적용).
+
+- `require_admin(actor: ActorContext) -> None` ✅
+  - status: ✅ Existing (2026-04-25 BE-G6 승격)
+  - purpose: admin 권한 가드. proposal_queue/scope_profiles `_require_admin` 본문 100% 동일을 통합.
+  - effects: none
+  - errors: `ApiPermissionDeniedError("관리자 권한이 필요합니다.")`
+  - source: `backend/app/utils/actor.py`
+  - tests: `backend/tests/unit/utils/test_actor.py` `TestRequireAdmin` (6 case — ORG_ADMIN/SUPER_ADMIN/VIEWER/AUTHOR/unauthenticated/no-role)
+  - replaced in: `app/api/v1/proposal_queue.py` + `app/api/v1/scope_profiles.py` `_require_admin` (thin re-export 위임).
+  - excluded by design:
+    - vectorization / admin_extraction_results / admin.py 의 다른 admin 가드 (`require_admin_access` 등) — 시그니처/동작 다름. 별 라운드 통합 검토.
+
+- `ADMIN_ROLES: frozenset[str] = frozenset({"ORG_ADMIN", "SUPER_ADMIN"})` ✅
+  - status: ✅ Existing (2026-04-25 BE-G6 승격)
+  - purpose: admin 으로 간주되는 role 이름 집합의 단일 진실점.
+  - source: `backend/app/utils/actor.py`
+  - tests: `TestAdminRoles` (4 case — 포함/제외/frozenset 불변)
+  - replaced in: `proposal_queue.py` + `scope_profiles.py` 의 `_ADMIN_ROLES` 모듈 상수 (thin re-export 호환).
+  - notes: frozenset 으로 immutable 보장. 새 admin role (예: `TENANT_ADMIN`) 추가 시 본 상수만 수정.
+
+### 1.5-extension `app.utils.http_errors` 확장 — 도메인 not_found
+
+- `not_found_resource(label_ko: str, resource_id: str, *, error_code: str | None = None) -> ApiNotFoundError` ✅ (B-N4)
+  - status: ✅ Existing (2026-04-25 B-N4 승격)
+  - purpose: `raise ApiNotFoundError(f"{Resource} '{id}' not found")` 영문 패턴 26 사이트 단일 리소스 케이스를 한국어로 통일.
+  - source: `backend/app/utils/http_errors.py` (지연 import 로 `ApiNotFoundError` 순환 회피)
+  - tests: `tests/unit/utils/test_http_errors.py` §6 (10 case — 반환 타입/메시지/http_status/error_code default+override/details/5 라벨/keyword-only/non-raise)
+  - effects: none. 인스턴스만 반환. `raise` 는 호출자.
+  - returns: `ApiNotFoundError` (handlers.api_error_handler 가 404 + `error_code="resource_not_found"` 응답 생성). **BE-G3 `not_found` 와 다른 계층** — 그건 `HTTPException` 반환, 본 helper 는 `ApiError` 계층.
+  - 메시지 표준: `f"{label_ko}을(를) 찾을 수 없습니다: {resource_id}"`. 한국어 조사가 받침에 따라 어색할 수 있어 `"을(를)"` 양립.
+  - replaces: **26 사이트** in 8 files (documents_service 2 / collections_service 2 / folders_service 7 / versions_service 3 / nodes_service 2 / draft_service 7 / workflow_service 2 / api/v1/documents 1).
+  - 라벨 매핑 (영문 → 한국어): Document → 문서 / Version → 버전 / Folder, Parent folder → 폴더 / Collection → 컬렉션 / Schema → 스키마 / Node → 노드.
+  - 비대상 (별 라운드): "X 가 Y 안에 없음" 이중 컨텍스트 패턴 5 사이트 (`f"Node '{node_id}' not found in version '{version_id}'"` 류). 단일 리소스 가정 시그니처와 안 맞음. 별도 helper 후보.
+  - 보안: `label_ko` / `resource_id` 모두 외부 응답 노출 — 호출자는 SQL/스택트레이스/비밀값 포함 금지 (CLAUDE.md §4.3).
+  - notes: `error_code` 자동 생성 (`f"NOT_FOUND_{label_upper}"`) 은 한국어 라벨이라 의미 없음 → 호출자 명시.
+
+---
+
 ## 3. 감사 메타
 
-- 후보 선정 근거: `docs/함수도서관/감사보고서_2026-04-25.md` §1~§3
+- 후보 선정 근거: `docs/함수도서관/감사보고서_2026-04-25.md` §1~§3 (1회차) + `docs/함수도서관/감사보고서_2026-04-25_2회차.md` §3 (2회차)
 - 스팟 체크 방법: `Grep` 으로 각 패턴 seed 재조회 (결과는 감사보고서 §5 에 원본 카운트 기재)
 - 후속 턴에서 각 항목을 **1개씩 별도 PR** 로 분리해 구현·호출지 치환·테스트·인덱스 업데이트를 묶어 처리한다. (CONSTITUTION 제30조 Commit as Verification Unit, 제32조 Reviewable PRs)

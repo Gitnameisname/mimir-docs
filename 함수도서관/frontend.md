@@ -326,9 +326,43 @@
 
 ---
 
+## 1.9 2회차 감사 신규 후보 (2026-04-25, 감사 2회차)
+
+### 1.9 `lib/styles/tokens.ts` 확장 — 폼 인라인 에러 (FORM_ERROR_*)
+
+**4 캐논 토큰 + 4 다크모드 변형** ✅ (2026-04-25 F-N1 승격).
+
+- `FORM_ERROR_INLINE: string` ✅ — `mt-1 text-xs text-red-600`. 가장 흔한 react-hook-form `errors.x.message` 패턴.
+- `FORM_ERROR_INLINE_STRONG: string` ✅ — `mt-1.5 text-xs text-red-600 font-medium`. auth 컴포넌트 변형 (강조).
+- `FORM_ERROR_BANNER: string` ✅ — `mb-3 text-xs text-red-600`. mutation isError 배너.
+- `FORM_ERROR_BOX: string` ✅ — `text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg`. admin 컴팩트 폼 에러 박스.
+- `FORM_ERROR_INLINE_DARK` / `FORM_ERROR_INLINE_STRONG_DARK` / `FORM_ERROR_BANNER_DARK` / `FORM_ERROR_BOX_DARK` — `dark:` 접두 다크모드 변형. preferences.theme 토글과 cn 합성 호환.
+
+  - status: ✅ Existing (2026-04-25 F-N1 승격)
+  - source: `frontend/src/lib/styles/tokens.ts`
+  - tests: `frontend/tests/StylesTokensFG4.test.ts` §F-N1 (23 case 추가) — 토큰 클래스 정확성 + 다크 변형 + cn 합성 회귀.
+  - effects: none. className 상수만.
+  - 4 토큰 분류 기준 (R3 패턴 따라):
+    1. **INLINE** — 폼 필드 옆 인라인 에러, 가장 흔함, border/background 없음
+    2. **INLINE_STRONG** — auth 컴포넌트 변형 (`mt-1.5` + `font-medium`)
+    3. **BANNER** — mutation 에러 배너 (mt 대신 mb)
+    4. **BOX** — 컴팩트 박스형 (bg-red-50 + rounded-lg), border/animate 없음 — `ALERT_ERROR_COMPACT` 보다 작음
+  - replaces: **시범 11 사이트** in 6 files (AuthInput 1 + PasswordInput 1 + AdminPromptsPage 3 + AdminScopeProfilesPage 2 + AdminAgentsPage 3 + FieldEditor 1). 잔존 30+ 변형 사이트 (text-red-500 / text-red-700 도메인 컨텍스트 / 통계 표시) 별 라운드.
+  - 비대상 (별 라운드):
+    - `text-xs text-red-700 mt-1` 결과 상세 에러 (golden-sets/evaluations/ai-platform) — 도메인 컨텍스트 + background 변형 잦음.
+    - `text-xs text-red-500` 변형 (NewDocumentPage / AdminDashboardPage) — 색상 강도 다름, 토큰 적용 시 가시 변경.
+    - `text-sm text-red-700 bg-red-50 border` 큰 박스 — `ALERT_ERROR_COMPACT` 가 더 가까움.
+    - 인터랙티브 요소 (`text-xs text-red-600 hover:bg-red-50`) — 버튼/링크.
+    - 통계/표시 (`text-xs text-red-600 mt-1` 으로 실패 카운트 표시) — 의미적으로 폼 에러 아님.
+  - notes:
+    - **R3 `ALERT_ERROR_COMPACT` 와 다른 계층**: 그건 `role="alert"` 박스 (rounded-lg + border + animate-in + responsive padding). 본 토큰은 폼 필드 인접 인라인 에러 (border/animation 없음, 작은 spacing).
+    - 컴포넌트화 (`<FormErrorMessage>` — role="alert" + aria-live 강제) 는 도입 보류 — 마이그레이션 비용 vs 토큰 단순성 tradeoff. 현 a11y 는 호출자가 `role="alert"` 명시.
+
+---
+
 ## 3. 감사 메타
 
-- 후보 선정 근거: `docs/함수도서관/감사보고서_2026-04-25.md` §4
+- 후보 선정 근거: `docs/함수도서관/감사보고서_2026-04-25.md` §4 (1회차) + `docs/함수도서관/감사보고서_2026-04-25_2회차.md` §4 (2회차)
 - 스팟 체크 결과 요약:
   - `toLocaleDateString` 17회, `new URLSearchParams` 18회, `URL.createObjectURL` 2회, `invalidateQueries` 79회, local `formatDate` 재선언 4건 (`@/lib/utils` 원본 제외)
   - debounce `setTimeout(..., 300)` 직접 매치는 0이었으나, `SEARCH_DEBOUNCE_MS` / `AUTOCOMPLETE_DEBOUNCE_MS` 상수로 이름이 달라져 매칭되지 않은 것. 실사용은 3곳 이상 확인 완료.

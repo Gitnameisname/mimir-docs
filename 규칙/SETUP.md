@@ -42,6 +42,8 @@ Ready for AI SW 시스템은 **6개 문서**로 구성된다.
 
 기존 코드베이스가 크고 AI 도입이 처음이라면 **`human-only` 모드로 먼저 도입**해서 문서 루틴(`functions.index.md`, Change Boundary, 테스트 계층)만 정착시키고, 이후 `codex-only` 또는 `dual-agent`로 승격하는 경로가 안전하다.
 
+> **Mimir 본 프로젝트의 적용**: 본 SETUP.md 는 framework 가이드 (다른 repo 도입용) 로 유지된다. Mimir 자체는 헌법 제11조의 per-directory `functions.index.md` 모델 대신 **중앙 함수도서관 모델**(`docs/함수도서관/{backend,frontend}.md`) 로 구현했다 (2026-04-25 신설). 본 문서의 `functions.index.md` 표현을 Mimir 적용 시 `docs/함수도서관/{backend,frontend}.md` 로 치환해 읽는다. 헌법 제11조 자체와의 정합은 별 ADR 사안 (S3 종료 후 처리).
+
 ---
 
 ## 2. 사전 준비물
@@ -222,6 +224,8 @@ Section 4 "Multi-Model Design Review as Practice"는 **그대로 유지**한다.
 
 ### Phase 5 — 첫 `functions.index.md` 만들기 (30분~2시간, repo 크기에 따름)
 
+> **Mimir 본 프로젝트는 본 Phase 5 의 per-directory 모델 대신 중앙 도서관 모델 (`docs/함수도서관/`) 을 채택했다** (§1 주석 참조). 본 절은 framework 가이드의 일반 절차로, 다른 repo 도입 시 사용한다.
+
 **신규 프로젝트**: 함수를 작성할 때마다 같은 커밋에서 인덱스를 추가·갱신한다. 처음부터 엄격하게.
 
 **기존 프로젝트 (legacy 도입)**: **일괄 백필**이 아니라 **촉발 단위 백필**을 권장한다.
@@ -232,6 +236,8 @@ Section 4 "Multi-Model Design Review as Practice"는 **그대로 유지**한다.
 4. 3개월 후 커버리지를 측정해 Maturity Stage를 `checklist`로 승격 고려
 
 일괄 자동 생성은 CONSTITUTION.md 제12조에서 반대된다 — 자동 생성은 의미 필드를 못 채운다.
+
+**중앙 도서관 모델 (Mimir 채택)**: per-directory 인덱스 대신 단일 카탈로그 (`docs/함수도서관/backend.md` / `frontend.md` + `README.md` index) 로 함수 지도를 구성하는 변형도 가능하다. 트레이드오프는: (장) 단일 진입점·중복 발견 용이·운영자 한 곳만 관리. (단) 디렉토리 로컬리티 약화·헌법 제11조 본문(per-directory)와 정합 별 ADR 필요. 도입은 자율, 채택 시 본 Phase 5 의 1~4 번 절차를 단일 카탈로그 갱신으로 대체한다.
 
 ### Phase 6 — PR 템플릿 + 최소 CI 체크 (30분)
 
