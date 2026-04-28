@@ -11,9 +11,12 @@
 | 인코딩 | UTF-8 |
 | Content-Type | `application/json` |
 | API 버전 | v1 |
+| **MCP 표면** (S3 P4) | `POST /api/v1/mcp` — 외부 AI 에이전트 전용 dispatcher (별도 envelope) |
 
 개발 환경: `http://localhost:8000/api/v1`  
 OpenAPI 문서: `http://localhost:8000/docs` (개발 환경만)
+
+> **REST vs MCP 표면 분리 (R5)**: 본 문서의 envelope/규약은 **REST 표면** 에 한정된다. 외부 AI 에이전트가 사용하는 MCP 표면은 별도 envelope (`source` / `scope` / `audit` / `detected_risks`) 와 ACL 모델 (ScopeProfile) 을 사용한다. 자세한 내용은 [MCP 표면 개요](../MCP%20기술서/MCP%20표면%20개요.md) 및 [도구별 명세](../MCP%20기술서/도구별%20명세.md) 참조.
 
 ---
 

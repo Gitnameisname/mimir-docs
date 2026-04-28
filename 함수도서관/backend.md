@@ -249,6 +249,243 @@
   - tests: `backend/tests/unit/test_annotation_anchoring_fg33.py` (5 case)
   - 호출 시점: `draft_service.save_draft` / `agent_proposal_service.propose_draft` 트랜잭션 안 (rebuild_nodes_from_snapshot + rebuild_tags_for_document 직후).
 
+### 1.7-fg40 `app.api.auth.models.ActorContext.can_call_tool` ✅ (S3 Phase 4 FG 4-0 §2.1.6, 2026-04-28)
+
+- `ActorContext.can_call_tool(tool_name: str, conn=None) -> bool` ✅
+  - status: ✅ Existing (2026-04-28 task4-0 §2.1.6 신설)
+  - purpose: MCP tool-level 권한 게이트 (R2 — Scope Profile 단일 ACL 결정점). actor_type ≠ AGENT 는 통과 (사람/시스템 호출은 별 게이트 처리). AGENT 는 ScopeProfile.allowed_tools 에 tool_name 포함 시에만 통과.
+  - effects: DB SELECT (ScopeProfile lookup) — 캐시 없음 (ScopeProfile 변경 즉시 반영).
+  - errors: 없음 — 모든 실패 (조회 실패 / scope_profile_id 없음 / profile 없음) 가 False (fail-closed).
+  - source: `backend/app/api/auth/models.py`
+  - tests: `backend/tests/integration/test_mcp_tool_acl.py` (Scenario 1~5 + Repository validation = 17 case)
+  - notes:
+    - **fail-closed**: ScopeProfileRepository 조회 실패도 거부 (R1 정합).
+    - **per-call lookup**: 캐시 미적용 — ScopeProfile 변경이 즉시 반영. 추후 캐시 도입 시 invalidation 보장 필요.
+    - **dual-pattern coexistence**: scope_filter 와 authorization_service 두 ACL 경로가 공존하나 (Pre-flight_실측.md §8), 본 게이트는 두 패턴 모두를 진입점에서 감싸 차원이 다름.
+  - 흡수 종결: task3-3.md §[129,223–225,318] (S3 P3 정적 리뷰 P1) — read_annotations 단일이 아니라 모든 MCP tool 표면.
+
+### 1.7-fg40 `app.mcp.tools._check_tool_allowed` ✅ (S3 Phase 4 FG 4-0 §2.1.6, 2026-04-28)
+
+- `_check_tool_allowed(actor: ActorContext, tool_name: str, conn=None) -> None` ✅
+  - status: ✅ Existing (2026-04-28 task4-0 §2.1.6 신설)
+  - purpose: 모든 MCP `tool_*` 진입점 첫 줄 (`_check_agent_write_blocked` 다음) 에서 `can_call_tool` 위임. False 반환 시 `MCPError(UNAUTHORIZED, 403)`.
+  - effects: 위임만 (자체 부작용 없음).
+  - errors: `MCPError(MCPErrorCode.UNAUTHORIZED, msg, http_status=403)`.
+  - source: `backend/app/mcp/tools.py`
+  - tests: `backend/tests/integration/test_mcp_tool_acl.py::TestScenario1DefaultDeny::test_check_tool_allowed_raises_403_for_empty`
+  - 적용 사이트: 5 도구 (search_documents / fetch_node / verify_citation / mimir.vectorization.status / read_annotations).
+
+### 1.7-fg40 `app.schemas.mcp` manifest 헬퍼 ✅ (S3 Phase 4 FG 4-0 §2.1.3, 2026-04-28)
+
+- `known_tool_names() -> frozenset[str]` ✅
+  - status: ✅ Existing (2026-04-28 task4-0 §2.1.3 신설)
+  - purpose: TOOL_SCHEMAS 의 도구 이름 집합. ScopeProfile.allowed_tools 검증 + manifest drift 감지의 단일 정본.
+  - source: `backend/app/schemas/mcp.py`
+  - 사용지: `app.repositories.scope_profile_repository._allowed_tools_validate`, `backend/scripts/dump_mcp_manifest.py`
+
+- `is_tool_mcp_exposed(tool_schema: dict) -> bool` ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: 도구가 MCP 표면 노출 가능한지 검사 (R1 — L4/forbidden/not_exposed 차단).
+  - source: `backend/app/schemas/mcp.py`
+  - tests: `backend/tests/integration/test_mcp_l4_blocked.py::TestL4DispatchBlocked` (5 case).
+
+- `mcp_exposed_tool_schemas() -> list[dict]` ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: `is_tool_mcp_exposed` 통과 도구만 반환 — `mcp_router._CURATED_TOOLS` 와 `tools/list` 응답의 단일 정본.
+  - source: `backend/app/schemas/mcp.py`
+
+- `mcp_exposed_public_view(tool_schema: dict) -> dict` ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: `tools/list` 외부 응답용 보수 view (도구등급화_매핑.md §4 옵션 A). `risk_tier`/`status`/`exposure_policy` 비노출.
+  - source: `backend/app/schemas/mcp.py`
+  - tests: `backend/tests/integration/test_mcp_l4_blocked.py::TestPublicViewExposesNoOpsInfo` (3 case).
+
+### 1.7-fg41 `app.mcp.uri_builder` ✅ (S3 Phase 4 FG 4-1 §2.1.2, 2026-04-28)
+
+`mimir://` URI 4 패턴 빌더 + parser + latest resolve. 라우터 / 도구의 단일 정본 — 문자열 인라인 금지 (헌법 제15조 §2.3 하드코딩 금지).
+
+- `build_doc_uri(document_id) -> str` ✅
+  - status: ✅ Existing (2026-04-28 task4-1 §2.1.2 신설)
+  - purpose: `mimir://documents/{document_id}` 빌드
+  - source: `backend/app/mcp/uri_builder.py`
+
+- `build_version_uri(document_id, version_id) -> str` ✅ — R3 강제 (`version_id="latest"` 거부 → ValueError)
+- `build_node_uri(document_id, version_id, node_id) -> str` ✅
+- `build_render_uri(document_id, version_id) -> str` ✅
+- `parse_uri(uri) -> Optional[MimirUriParts]` ✅ — 4 패턴 (document/version/node/render) 인식
+- `resolve_latest_version(conn, document_id) -> Optional[str]` ✅ — `VersionsRepository.get_current_published` 위임
+- `resolve_version_id(conn, document_id, version_id) -> Optional[str]` ✅ — `"latest"` 또는 None 시 resolve
+  - tests: `backend/tests/integration/test_mcp_envelope_fg41.py::TestUriBuilder` / `TestUriParser` / `TestLatestResolve` (18 case)
+  - notes:
+    - **R3 강제**: 빌더가 `"latest"` 컴파일 타임 거부. 외부에 노출되는 URI 는 항상 구체 version_id.
+    - 정규식: `[^/]+` (1+) — 빈 segment 거부.
+    - `app.mcp.resources.parse_resource_uri` 는 본 모듈의 `parse_uri` 위임 + node-only 백워드 호환 표면.
+
+### 1.7-fg41 `app.mcp.risk_mapper` ✅ (S3 Phase 4 FG 4-1 §2.1.3, 2026-04-28)
+
+- `map_injection_patterns(patterns_detected: Iterable[str]) -> list[MCPDetectedRisk]` ✅
+  - status: ✅ Existing (2026-04-28 task4-1 §2.1.3 신설)
+  - purpose: `prompt_injection_detector` 의 카테고리 라벨 → MCPDetectedRisk (code/severity) 매핑. 같은 (code, severity) 의 위험은 dedupe (클라이언트 노이즈 감소).
+  - effects: 없음 (순수 변환).
+  - errors: 없음 (알 수 없는 카테고리 → `anomaly` (low) fallback).
+  - source: `backend/app/mcp/risk_mapper.py`
+  - tests: `backend/tests/integration/test_mcp_envelope_fg41.py::TestRiskMapper` (8 case)
+  - 매핑 표:
+    - instruction_override / boundary_manipulation → `directive_pattern` (high)
+    - code_execution → `secret_leak` (high)
+    - markup_injection → `url_obfuscation` (medium)
+    - 그 외 → `anomaly` (low)
+
+- `map_injection_result(result) -> list[MCPDetectedRisk]` ✅ — `InjectionDetectionResult` 또는 None 처리.
+
+### 1.7-fg41 `app.api.v1.mcp_router` envelope 헬퍼 ✅ (S3 Phase 4 FG 4-1 §2.1.4, 2026-04-28)
+
+- `_build_envelope(tool_name, raw, injection) -> MCPReadEnvelope` ✅
+  - status: ✅ Existing (2026-04-28 task4-1 §2.1.4)
+  - purpose: 도구별 매핑 표 (search/fetch/verify/vectorization/read_annotations) 적용 + R4 자동 보장.
+  - effects: 순수 변환 — 도구 함수 출력 + InjectionDetectionResult → MCPReadEnvelope.
+  - source: `backend/app/api/v1/mcp_router.py`
+
+- `_enrich_search_items_with_envelope(items: list[dict]) -> None` ✅
+  - purpose: search_documents 결과 항목별 `_envelope` (MCPItemEnvelope) 부착 + per-item prompt injection 탐지.
+  - effects: items 원본 mutate (in-place).
+  - notes:
+    - source 빌드 불가 항목 (document_id 없음) 은 envelope 미부착 — 잘못된 source 노출 방지.
+    - 호출 시점: `mcp_tool_call` / `mcp_tool_call_stream` 가 search_documents 응답 후 1회.
+
+### 1.7-fg42 `app.services.document_resolver_service` ✅ (S3 Phase 4 FG 4-2 §2.1.3, 2026-04-28)
+
+자연어 참조 → `document_id` + `version_ref` 정규화. 5단계 알고리즘 + ACL 통합 + 폐쇄망 fallback.
+
+- `resolve_reference(conn, reference, *, recent_document_ids, preferred_doc_types, max_candidates, confidence_threshold, allowed_doc_ids) -> ResolveResult` ✅
+  - status: ✅ Existing (2026-04-28 task4-2 §2.1.3 신설)
+  - purpose: 5단계 (exact_title → alias → recent_context → semantic → fts_fallback) 누적 후보 + dedupe + 임계 필터.
+  - effects: DB SELECT (documents / 벡터 검색 시 외부 인프라).
+  - errors: 단계별 try/except 로 빈 후보 fallback (raise 없음).
+  - source: `backend/app/services/document_resolver_service.py`
+  - tests: `backend/tests/integration/test_mcp_tools_fg42.py::TestResolverStages` (5 case)
+  - notes:
+    - **ACL**: 모든 단계가 `allowed_doc_ids` 검사 — None 이면 admin/내부 (필터 skip).
+    - **폐쇄망**: `MIMIR_OFFLINE=1` 시 단계 4 (semantic) 는 `_fts_fallback` 으로 자동 대체. 벡터 인프라 fail 시도 자동 fallback.
+    - **R3**: 후보의 `version_ref` 는 `"latest_published"` 또는 `"vN"` — 단독 `"latest"` 절대 미반환.
+
+### 1.7-fg42 `app.mcp.tools` 신규 도구 3종 ✅ (S3 Phase 4 FG 4-2 §2.1.1~§2.1.3, 2026-04-28)
+
+- `tool_search_nodes(request, actor, conn) -> SearchNodesData` ✅ — 노드 그래뉼래리티 검색 (SearchService.search_nodes 위임 + ACL post-filter + node_kinds + content_hash)
+- `tool_read_document_render(request, actor, conn) -> ReadDocumentRenderData` ✅ — 렌더링 텍스트 + node_anchors + render_hash (`_walk_blocks_for_text` 위임, R3 강제)
+- `tool_resolve_document_reference(request, actor, conn) -> ResolveDocumentReferenceData` ✅ — 자연어 참조 정규화 (document_resolver_service 위임)
+
+각 함수 첫 줄: `_check_agent_write_blocked` + `_check_tool_allowed(actor, "<name>", conn=conn)`.
+
+source: `backend/app/mcp/tools.py`
+tests: `backend/tests/integration/test_mcp_tools_fg42.py` (37 case)
+
+### 1.7-fg42 `app.mcp.tools._walk_blocks_for_text` ✅ (S3 Phase 4 FG 4-2 §2.1.2, 2026-04-28)
+
+- `_walk_blocks_for_text(blocks, *, format, include_anchors) -> tuple[str, list[dict]]` ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: RenderBlock 트리 → (rendered_text, node_anchors). plain_text / markdown 두 모드 + node_id ↔ offset 매핑.
+  - effects: 순수 변환.
+  - source: `backend/app/mcp/tools.py`
+  - notes: dict / object 양쪽 지원 (`_g` helper). render_hash 결정성을 위해 마지막 rstrip + markdown 끝 \n 정규화.
+
+### 1.7-fg43 `app.schemas.citation.Citation` 갱신 ✅ (S3 Phase 4 FG 4-3, 2026-04-28)
+
+- `Citation` Pydantic 모델 + `CitationBasis` Literal export ✅
+  - status: ✅ Existing (2026-04-28 task4-3 §2.1.2 적응안 — Disagreement Record)
+  - purpose: 5-tuple 좌표 + `citation_basis` (node_content vs rendered_text). citations 테이블 부재로 in-memory 표현만 갱신.
+  - source: `backend/app/schemas/citation.py`
+  - tests: `backend/tests/integration/test_verify_citation_v2.py::TestSchemaContracts` (2 case)
+
+### 1.7-fg43 `app.mcp.tools.tool_verify_citation` 5중 검증 ✅ (S3 Phase 4 FG 4-3 §2.1.4, 2026-04-28)
+
+- `tool_verify_citation(request, actor, conn) -> VerifyCitationData` ✅
+  - status: ✅ Existing (2026-04-28 task4-3 5중 검증 재작성)
+  - purpose: exists / pinned / hash_matches / quoted_text_in_content / span_valid 5중 검증 + R3 강제 (`version_id="latest"` 즉시 MCPError).
+  - effects: DB SELECT (versions / chunk) + (rendered_text 모드) render_service 위임.
+  - errors: `MCPError(INVALID_REQUEST, 400)` for `latest` 입력. 그 외 검증 실패는 `verified=False` 응답.
+  - source: `backend/app/mcp/tools.py`
+  - tests: `backend/tests/integration/test_verify_citation_v2.py` (27 case — 검사 1~5 각각 + 통합 + Schema + envelope)
+  - notes:
+    - **백워드 호환**: `content_snapshot` / `hash_matches` / `version_valid` 필드 유지. 기존 클라이언트는 `checks` 로 점진 마이그레이션.
+    - **R3 강제**: `latest` 가 응답 어디에도 등장 안 함 (요청 시점 즉시 거부).
+    - **citation_basis 분기**: rendered_text 모드는 `render_service.render_version` + `_walk_blocks_for_text(plain_text)` 위임. render_hash 결정성 의존.
+
+### 1.7-fg45 `app.schemas.mcp` capability manifest 확장 ✅ (S3 Phase 4 FG 4-5, 2026-04-28)
+
+8 도구 manifest 5 신규 필드 + Literal `PolicyProfile` + 헬퍼 2종 + admin/public view 분리.
+
+- `default_enabled_tool_names() -> list[str]` ✅ — `default_enabled=True` 인 노출 도구 (정렬). `ScopeProfile.create(use_defaults=True)` 자동 등록 후보.
+- `tools_by_policy_profile(profile: str) -> list[str]` ✅ — `read_safe` / `write_audited` / `admin_only` / `experimental` 그룹별 도구 이름.
+- `mcp_admin_full_view(tool_schema: dict) -> dict` ✅ — `/admin/mcp/manifest` endpoint 가 사용. `default_enabled` / `policy_profile` 등 운영자 전용 필드 모두 노출.
+- `mcp_exposed_public_view` 갱신 ✅ — 외부 응답에 `requires` / `preferred_use` / `streaming_supported` 추가 노출, `default_enabled` / `policy_profile` 비노출.
+
+source: `backend/app/schemas/mcp.py`
+tests: `backend/tests/integration/test_mcp_manifest_extended_fg45.py` (27 case)
+notes:
+  - **외부/운영자 view 분리**: 운영 정찰 가능성 있는 필드 (default / policy_profile) 는 admin only.
+  - **manifest drift 게이트** (FG 4-4) 가 자동으로 5 신규 필드 정합 검증 — TOOL_SCHEMAS 변경 시 manifest JSON 재생성 + commit 필수.
+
+### 1.7-fg45 `ScopeProfileRepository.create(use_defaults)` ✅ (S3 Phase 4 FG 4-5 §2.1.5, 2026-04-28)
+
+- `create(..., use_defaults: bool = False)` 옵션 추가 ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: `allowed_tools` 미입력 + `use_defaults=True` 시 `default_enabled_tool_names()` 자동 등록. False (default) 면 default-deny 보존 — 기존 호출자 영향 0.
+  - source: `backend/app/repositories/scope_profile_repository.py`
+  - tests: `backend/tests/integration/test_mcp_manifest_extended_fg45.py::TestScopeProfileUseDefaults` (3 case)
+
+### 1.7-fg45 `GET /admin/mcp/manifest` endpoint ✅ (S3 Phase 4 FG 4-5 §2.1.4, 2026-04-28)
+
+- `admin_mcp_manifest(actor) -> SingleResponse[AdminMcpManifest]` ✅
+  - status: ✅ Existing (2026-04-28)
+  - purpose: 8 MCP 도구의 전체 manifest 반환 — Admin UI 동적 fetch 정본. `KNOWN_MCP_TOOLS` 정적 상수 제거 (FG 4-0 §7 #6 후속 종결).
+  - effects: 읽기만. audit 없음 (운영자 read-only).
+  - errors: `admin.read` 권한 미통과 시 401/403.
+  - source: `backend/app/api/v1/admin.py`
+  - tests: `backend/tests/integration/test_mcp_manifest_extended_fg45.py::TestAdminManifestEndpoint` (구조 검증, 2 case)
+
+### 1.7-fg46 `app.services.agent_proposal_service` 확장 ✅ (S3 Phase 4 FG 4-6, 2026-04-28)
+
+S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempotency + impact preview 신설. MCP 표면 최초 쓰기 도구 (`tool_save_draft`) 의 도메인 코어.
+
+- `propose_draft(... , content_snapshot=None, idempotency_key=None)` 시그니처 확장 ✅
+  - status: ✅ Existing (2026-04-28 task4-6)
+  - purpose: ProseMirror dict 직접 입력 + (agent_id, key) idempotent. 기존 호출자 영향 0 (default 보존).
+  - source: `backend/app/services/agent_proposal_service.py`
+
+- `_lookup_idempotent_proposal(conn, agent_id, idempotency_key) -> Optional[dict]` ✅
+  - purpose: UNIQUE INDEX (agent_id, idempotency_key) 위에 기존 proposal 조회. 같은 key 재호출 시 새 INSERT 없이 같은 결과.
+
+- `compute_draft_impact(conn, *, document_id, content_snapshot) -> dict` ✅
+  - purpose: save_draft 적용 시 발생할 영향 사전 계산 (DB 변경 없이). nodes_added / nodes_modified / nodes_deleted / chars_added / chars_removed / overwrites_existing_draft / summary.
+  - effects: SELECT 만 (실 변경 0).
+  - notes:
+    - **단순 차이**: 본 FG 1라운드 experimental — 정밀 NodeDiff 는 별 라운드.
+    - **자연어 summary**: reviewer UI 가 사람용으로 표시.
+  - tests: `backend/tests/integration/test_save_draft_fg46.py::TestComputeDraftImpact` (3 case)
+
+### 1.7-fg46 `app.mcp.tools.tool_save_draft` ✅ (S3 Phase 4 FG 4-6 §2.1.5, 2026-04-28)
+
+- `tool_save_draft(request, actor, conn) -> SaveDraftData` ✅
+  - status: ✅ Existing (2026-04-28). **MCP 표면 최초 쓰기 도구**.
+  - purpose: L2 propose 전용 — 자동 머지 0. 4 사전 조건 (idempotency / human approval / impact / 감사 4종) 모두 충족.
+  - effects: DB INSERT (versions, agent_proposals) — agent_proposal_service 위임.
+  - errors: MCPError (UNAUTHORIZED 403 / NOT_FOUND 404 / INVALID_REQUEST 409 / INTERNAL_ERROR 500).
+  - source: `backend/app/mcp/tools.py`
+  - tests: `backend/tests/integration/test_save_draft_fg46.py` (33 case)
+  - notes:
+    - **R3 / R4 보존**: write_envelope.instruction_authority="none". R6 의 정신은 human approval 패턴으로 구현.
+    - **L3/L4 영구 제외**: TOOL_SCHEMAS 에 L3/L4 등재 0 회귀 강화.
+
+### 1.7-fg46 `app.api.v1.mcp_router._build_write_envelope` ✅ (S3 Phase 4 FG 4-6 §2.1.6, 2026-04-28)
+
+- `_build_write_envelope(tool_name, raw) -> MCPWriteEnvelope` ✅
+  - purpose: write 도구 응답 envelope 빌더. read envelope (`_build_envelope`) 와 분리.
+  - source: `backend/app/api/v1/mcp_router.py`
+  - notes:
+    - `MCPResponse.write_envelope` 별 필드 사용 — 클라이언트가 read/write 응답 구분 가능.
+    - 모든 분기에서 `requires_human_approval=True` 강제.
+
 ### 1.7-extension `app.audit.emitter` ContextVar (R9, 2026-04-25)
 
 - `set_trace_id(trace_id) -> Token` / `reset_trace_id(token)` / `current_trace_id() -> str | None` ✅

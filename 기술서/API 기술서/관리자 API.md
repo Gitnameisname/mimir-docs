@@ -291,7 +291,83 @@ Authorization: Bearer <admin-token>
 
 ---
 
-## 8. 시스템 정보
+## 8. Scope Profile 관리 (S3 Phase 4)
+
+외부 AI 에이전트(MCP 클라이언트)의 ACL 을 관리하는 엔드포인트.
+
+### Scope Profile 목록 / 상세 조회
+
+```
+GET /api/v1/admin/scope-profiles
+GET /api/v1/admin/scope-profiles/{profile_id}
+Authorization: Bearer <admin-token>
+```
+
+### Scope Profile 생성
+
+```
+POST /api/v1/admin/scope-profiles
+Authorization: Bearer <admin-token>
+
+{
+  "name": "rag-agent-prod",
+  "description": "RAG 에이전트 운영 프로파일",
+  "rate_limit_per_minute": 60,
+  "read_filter": {
+    "published_only": true,
+    "accessible_roles": ["VIEWER", "AUTHOR"]
+  },
+  "allowed_tools": [
+    "search_documents",
+    "fetch_node",
+    "verify_citation",
+    "read_document_render",
+    "resolve_document_reference",
+    "search_nodes",
+    "read_annotations",
+    "mimir.vectorization.status"
+  ],
+  "use_defaults": false
+}
+```
+
+`use_defaults=true` 로 설정 시 `allowed_tools` 무시, `manifest.default_enabled=true` 인 도구만 자동 화이트리스트.
+
+### Scope Profile 수정 / 비활성화
+
+```
+PUT    /api/v1/admin/scope-profiles/{profile_id}
+DELETE /api/v1/admin/scope-profiles/{profile_id}
+```
+
+`DELETE` 는 물리 삭제가 아닌 비활성화 (해당 프로파일 사용하는 API Key 즉시 차단).
+
+---
+
+## 9. MCP 매니페스트 (S3 Phase 4)
+
+### 외부 매니페스트 (공개)
+
+```
+GET /mcp/manifest
+```
+
+외부 노출용 9 도구 manifest — `risk_tier`, `maturity`, `status`, `exposure_policy`, `default_enabled`, `requires`, `preferred_use`, `policy_profile`, `streaming_supported` 9 필드. 노출 정책 `never` 인 도구는 응답에서 제거됨.
+
+### 운영자 매니페스트 (전체 view)
+
+```
+GET /api/v1/admin/mcp/manifest
+Authorization: Bearer <admin-token>
+```
+
+L4 도구 포함 모든 도구의 manifest 를 반환 — drift 게이트 / Admin UI 의 ScopeProfile 도구 토글 UI 가 사용.
+
+자세한 내용은 [매니페스트 정책](../MCP%20기술서/매니페스트%20정책.md) 참조.
+
+---
+
+## 10. 시스템 정보
 
 ### 헬스체크 (공개)
 

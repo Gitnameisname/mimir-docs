@@ -1,0 +1,233 @@
+{
+  "schema_version": "1.1",
+  "generated_by": "backend/scripts/dump_mcp_manifest.py",
+  "fg": "S3 Phase 4 FG 4-0 §2.1.5 + FG 4-5",
+  "tools": [
+    {
+      "name": "fetch_node",
+      "description": "Fetch the full content of a specific document node",
+      "risk_tier": "L0",
+      "maturity": "stable",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "노드 단위 본문 조회 — search_documents 또는 search_nodes 후 깊이 있는 인용.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "mimir.vectorization.status",
+      "description": "문서의 벡터화 상태를 조회한다. 에이전트가 RAG 답변을 찾지 못할 때 '해당 문서가 색인됐는지' 를 진단하는 용도. 읽기 전용. 재벡터화는 사람이 UI 에서 명시적으로 수행.",
+      "risk_tier": "L0",
+      "maturity": "beta",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": false,
+      "requires": [],
+      "preferred_use": "RAG 답변 부재 진단 — 색인 누락 / 임베딩 차원 mismatch 등을 에이전트가 자가 점검.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "read_annotations",
+      "description": "Read inline annotations attached to a document. Read-only — agents cannot create / modify / delete annotations via this tool. ACL is enforced via the agent's Scope Profile (404 if document is out of scope).",
+      "risk_tier": "L0",
+      "maturity": "beta",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "인라인 주석 + 멘션 조회. 사용자 협업 컨텍스트 추적용.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:read"
+      }
+    },
+    {
+      "name": "read_document_render",
+      "description": "Read a document's rendered (human-readable) text. Returns plain_text or markdown plus optional node_anchors mapping node_id ↔ offsets, and a render_hash for downstream citation verification (FG 4-3 rendered_text basis).",
+      "risk_tier": "L0",
+      "maturity": "beta",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "rendered_text + node_anchors — citation_basis=rendered_text 인용 또는 사람용 본문 노출.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "resolve_document_reference",
+      "description": "Resolve a natural-language document reference (e.g. 'the sales manual', 'v2024 security policy') to a concrete document_id + version_ref with confidence + needs_disambiguation. Stages: exact_title → alias → recent_context → semantic → fts_fallback (offline).",
+      "risk_tier": "L1",
+      "maturity": "experimental",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": false,
+      "requires": [],
+      "preferred_use": "자연어 참조 → document_id + version_ref. 임계 미달 시 needs_disambiguation 으로 후보 순회.",
+      "policy_profile": "experimental",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "save_draft",
+      "description": "Propose a draft change to a document. Requires human reviewer approval before merge — agent cannot self-approve. Idempotent via idempotency_key. The agent's allowed_tools must include 'save_draft' (default_enabled=False — operator must register explicitly).",
+      "risk_tier": "L2",
+      "maturity": "experimental",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": false,
+      "requires": [
+        "fetch_node"
+      ],
+      "preferred_use": "에이전트가 사람 reviewer 의 승인을 받아 draft 변경을 제안할 때. idempotency_key 로 재시도 안전 보장.",
+      "policy_profile": "write_audited",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:write"
+      }
+    },
+    {
+      "name": "search_documents",
+      "description": "Search Mimir documents using full-text or vector search",
+      "risk_tier": "L0",
+      "maturity": "stable",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "FTS/벡터 문서 검색 (top_k≤50). 외부 Chatbot 의 일반 질의 응답.",
+      "policy_profile": "read_safe",
+      "streaming_supported": true,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "search_nodes",
+      "description": "Search Mimir documents at the node grain (block / sentence-level). Use this when you need a tighter citation candidate than search_documents. Returns nodes ranked by relevance with content_hash for downstream verify_citation.",
+      "risk_tier": "L0",
+      "maturity": "beta",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "노드 그래뉼래리티 검색 — citation 후보를 좁히고 verify_citation 으로 연결.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true,
+        "delegation": "delegate:search"
+      }
+    },
+    {
+      "name": "verify_citation",
+      "description": "Verify a Citation 5-tuple using content_hash comparison",
+      "risk_tier": "L1",
+      "maturity": "stable",
+      "status": "enabled",
+      "exposure_policy": "MCP_ENABLED",
+      "default_enabled": true,
+      "requires": [],
+      "preferred_use": "5중 검증 (exists / pinned / hash / quoted_text / span). citation_basis 명시 권장.",
+      "policy_profile": "read_safe",
+      "streaming_supported": false,
+      "is_mcp_exposed": true,
+      "authentication": {
+        "method": "oauth2_client_credentials",
+        "scope_profile_required": true
+      }
+    }
+  ],
+  "extensions": [
+    {
+      "name": "mimir.citation-5tuple",
+      "version": "1.0",
+      "description": "Citation verification using 5-tuple (document_id, version_id, node_id, span_offset, content_hash)",
+      "capabilities": {
+        "verify_citation": true,
+        "cite_format": "5-tuple"
+      }
+    },
+    {
+      "name": "mimir.span-backref",
+      "version": "1.0",
+      "description": "Span-level back-reference to original content",
+      "capabilities": {
+        "span_verification": true,
+        "position_tracking": true
+      }
+    }
+  ],
+  "totals": {
+    "all": 9,
+    "mcp_exposed": 9,
+    "by_risk_tier": {
+      "L0": 6,
+      "L1": 2,
+      "L2": 1
+    },
+    "by_maturity": {
+      "beta": 4,
+      "experimental": 2,
+      "stable": 3
+    },
+    "by_status": {
+      "enabled": 9
+    },
+    "by_policy_profile": {
+      "experimental": 1,
+      "read_safe": 7,
+      "write_audited": 1
+    },
+    "default_enabled_count": 6
+  },
+  "known_tool_names": [
+    "fetch_node",
+    "mimir.vectorization.status",
+    "read_annotations",
+    "read_document_render",
+    "resolve_document_reference",
+    "save_draft",
+    "search_documents",
+    "search_nodes",
+    "verify_citation"
+  ]
+}
