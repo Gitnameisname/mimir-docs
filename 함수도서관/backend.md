@@ -655,3 +655,227 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
 - 후보 선정 근거: `docs/함수도서관/감사보고서_2026-04-25.md` §1~§3 (1회차) + `docs/함수도서관/감사보고서_2026-04-25_2회차.md` §3 (2회차)
 - 스팟 체크 방법: `Grep` 으로 각 패턴 seed 재조회 (결과는 감사보고서 §5 에 원본 카운트 기재)
 - 후속 턴에서 각 항목을 **1개씩 별도 PR** 로 분리해 구현·호출지 치환·테스트·인덱스 업데이트를 묶어 처리한다. (CONSTITUTION 제30조 Commit as Verification Unit, 제32조 Reviewable PRs)
+
+---
+
+## 4. 도메인 함수 — S3 Phase 2 FG 2-3 (2026-05-10 도입)
+
+**백링크 `[[문서명]]` 파싱·해결·동기화** — `docs/개발문서/S3/phase2/작업지시서/task2-3.md` 의 신규 모듈/함수 정본 인덱스.
+
+### 4.1 `app.services.wikilink_rules`
+
+- `WIKILINK_PATTERN: re.Pattern` ✅
+  - purpose: `\\[\\[([^\\]\\n|]{1,200})(?:\\|([^\\]\\n]{1,200}))?\\]\\]` 정규식 정본. 본문 wikilink 토큰 매칭의 단일 정본.
+  - notes: 서버 / 클라이언트 (`frontend/src/features/editor/tiptap/extensions/WikiLinkMark.ts`) 양쪽 동일 패턴 — 변경 시 양쪽 동시 수정.
+
+- `extract_wikilinks_from_snapshot(snapshot: dict | None) -> list[tuple[str, str]]` ✅
+  - purpose: ProseMirror doc 에서 `(raw_text, node_id)` 튜플 list 추출.
+  - effects: none (순수 함수)
+  - errors: none (부적합 입력은 빈 리스트 반환)
+  - source: `backend/app/services/wikilink_rules.py`
+  - tests: `backend/tests/unit/test_wikilink_rules_fg23.py` (28 case)
+  - 제외 규칙: codeBlock 노드 / link mark 가 걸린 텍스트 / 중첩 `[[[[foo]]]]` / 빈 `[[]]` / 개행 포함
+
+### 4.2 `app.services.wikilink_resolver`
+
+- `normalize_title(s: str) -> str` ✅
+  - purpose: NFC 정규화 + 양쪽 공백 strip. documents.title vs raw_text 비교용.
+
+- `resolve_wikilinks(conn, *, from_document_id, links, viewer_scope_profile_ids, repository=...) -> list[tuple[Optional[str], str, str, ResolvedStatus]]` ✅
+  - purpose: raw_text → documents.title 매칭 → resolved/ambiguous/missing 결정.
+  - effects: read-only (DB SELECT)
+  - source: `backend/app/services/wikilink_resolver.py`
+  - tests: `backend/tests/unit/test_wikilink_resolver_fg23.py` (13 case — 매칭 5 + ACL 4 + NFC 2 + 캐싱 2)
+  - **R2 ACL 단일 결정점**: viewer_scope_profile_ids keyword-only required. resolver 자체는 ACL 결정 안 함 — repository 의 IN 필터로 위임.
+  - 존재 유출 방지: viewer Scope 외 문서 제목은 후보로 들어가지 않음 → missing 으로 관측.
+
+### 4.3 `app.services.snapshot_sync_service` 확장
+
+- `rebuild_wikilinks_for_document(conn, document_id, snapshot) -> int` ✅
+  - purpose: snapshot 의 `[[]]` 토큰을 추출·해결·`document_links` 테이블에 replace.
+  - effects: DELETE + INSERT (트랜잭션 내). 호출자 `with get_db() as conn:` 안에서 호출 의무.
+  - source: `backend/app/services/snapshot_sync_service.py`
+  - 호출 순서 (작업지시서 상호검증 §7): nodes → tags → **wikilinks** → annotation_anchoring
+  - 호출 지점: `draft_service.save_draft` + `agent_proposal_service`. publish 경로는 content_snapshot 변경 없으므로 호출 안 함.
+  - Scope 결정: 출발 문서 (`from_document_id`) 의 `scope_profile_id` 를 작성자 Scope 로 사용.
+
+### 4.4 `app.repositories.document_links_repository.DocumentLinksRepository` ✅
+
+- source: `backend/app/repositories/document_links_repository.py`
+- 테이블: `document_links` (Alembic `s3_p2_document_links`, 2026-05-10, head)
+- 메서드:
+  - `replace_for_document(conn, *, from_document_id, rows: Iterable[(to_doc_id, node_id, raw_text, status)]) -> int` — 트랜잭션 내 DELETE → INSERT
+  - `list_backlinks(conn, *, to_document_id, viewer_scope_profile_ids, page, page_size) -> (items, total)` — 역방향 paginated, resolved 만 + viewer Scope 자동 필터
+  - `list_outgoing(conn, *, from_document_id, limit) -> list[DocumentLink]` — 정방향 admin/디버깅 (ACL 필터 없음)
+  - `resolve_title_prefix(conn, *, q, viewer_scope_profile_ids, limit) -> list[dict]` — 자동완성 prefix LIKE
+  - `find_candidates_by_title(conn, *, title, viewer_scope_profile_ids) -> list[dict]` — resolver 호출용 정확한 title 매칭
+
+### 4.5 API 표면 — `app.api.v1.document_links`
+
+- `GET /api/v1/documents/resolve?q=&limit=` — viewer Scope 자동 필터 (TipTap WikiLinkMark 자동완성)
+- `GET /api/v1/documents/{id}/backlinks?page=&page_size=` — viewer Scope 자동 필터
+- `GET /api/v1/documents/{id}/links?limit=` — admin 전용 (ORG_ADMIN/SUPER_ADMIN)
+- **라우터 등록 순서**: `/resolve` 가 documents 라우터의 `/{document_id}` 보다 먼저 매칭되어야 함 — `app/api/v1/router.py` 에서 documents 보다 앞에 include 의무.
+
+---
+
+## 5. 도메인 함수 — S3 Phase 2 FG 2-4 (2026-05-10 도입)
+
+**그래프 뷰 데이터 API** — `docs/개발문서/S3/phase2/작업지시서/task2-4.md` 의 신규 모듈/함수 정본 인덱스.
+
+### 5.1 `app.services.graph_service`
+
+- `DEFAULT_LIMIT = 500`, `MAX_LIMIT = 2000` ✅
+  - purpose: 노드 (document) 상한 단일 정본. 라우터 / 테스트 / 클라이언트 모두 본 모듈 import.
+
+- `NodeType = Literal["document", "tag", "collection"]` / `EdgeType = Literal["backlink", "tagged", "in_collection"]` ✅
+
+- `GraphNode` / `GraphEdge` / `GraphResponse` (dataclass) ✅
+  - source: `backend/app/services/graph_service.py`
+
+- `build_graph(conn, *, viewer_scope_profile_ids, limit, collection_id, folder_id, tag_name_normalized, include_tag_nodes, include_collection_nodes) -> GraphResponse` ✅
+  - purpose: documents + (옵션) 메타노드 + 엣지를 합쳐 그래프 elements 조립.
+  - effects: read-only (DB SELECT)
+  - source: `backend/app/services/graph_service.py`
+  - tests: `backend/tests/unit/test_graph_service_fg24.py` (15 case — 기본 3 + 상한 4 + backlink 2 + tag 2 + collection 2 + ACL 1 + combined 1)
+  - **R2 ACL 단일 결정점**: documents 의 viewer_scope_profile_ids IN 필터를 정본으로 한다. 메타노드 (tag / collection) 는 visible documents 의 메타로 자연 필터됨 (S3 ⑥ 뷰 ≠ 권한).
+  - 노드 ID 형식: document=`<uuid>`, tag=`tag:<uuid>`, collection=`collection:<uuid>` — frontend 가 prefix 로 분기.
+  - truncated 플래그: documents 가 limit 에 걸렸을 때 true. truncated 시 별도 count 쿼리로 total_documents 정확 보고.
+
+### 5.2 API 표면 — `app.api.v1.document_graph`
+
+- `GET /api/v1/documents/graph` ✅
+  - 쿼리: `limit=` (1~2000) / `include_tag_nodes=` / `include_collection_nodes=` / `collection=` / `folder=` / `tag=`
+  - 응답: `{ nodes: [...], edges: [...], truncated: bool, total_documents: int }`
+  - viewer Scope 자동 필터 (`_resolve_viewer_scope_profile_ids` 헬퍼 재사용)
+  - **라우터 등록 순서**: `/graph` 가 documents 라우터의 `/{document_id}` 보다 먼저 매칭되어야 함 — `app/api/v1/router.py` 에서 documents 보다 앞에 include 의무 (FG 2-3 의 `/resolve` 와 동일 패턴).
+
+---
+
+## 6. 도메인 함수 — S3 Phase 2 FG 2-5 (2026-05-10 도입)
+
+**Saved Views (필터+정렬+레이아웃 저장 + URL 공유)** — `docs/개발문서/S3/phase2/작업지시서/task2-5.md`.
+
+### 6.1 `app.schemas.saved_views`
+
+- `SavedViewLayout = Literal["list", "tree", "cards", "graph"]` ✅
+  - frontend `features/documents/layout.ts` 의 `DOCUMENT_LAYOUTS` 와 정확히 같아야 함 — 변경 시 양쪽 동시 수정.
+- `SavedViewSortItem` (Pydantic, `extra="forbid"`) ✅ — `field` × `direction` 화이트리스트
+- `SavedViewFilter` (Pydantic, `extra="forbid"`) ✅
+  - 화이트리스트 키: q / document_type / status / tag / collection / folder / include_subfolders / created_from / created_to / owner_id
+  - tag 정규화 (소문자 + strip) — validator 자동 적용
+  - **임의 키 거부** — task2-5.md §7 R-01 (filter JSON 임의 키 저장 차단)
+- `SavedViewCreateRequest` / `SavedViewUpdateRequest` ✅ — 모두 `extra="forbid"`
+- `SavedViewResponse` ✅ — **`owner_id` 자체 미포함** (공유 URL 마스킹)
+
+### 6.2 `app.models.saved_view.SavedView` ✅ (dataclass)
+
+- 테이블: `saved_views` (Alembic `s3_p2_saved_views`, 2026-05-10, head)
+- UNIQUE (owner_id, name) — DB 제약 + 409 ApiConflictError 변환
+- 인덱스: `(owner_id, updated_at DESC)`
+
+### 6.3 `app.repositories.saved_views_repository.SavedViewsRepository` ✅
+
+- 메서드:
+  - `create(conn, *, owner_id, name, filter, sort, layout, include_tag_nodes)` — UNIQUE 위반 시 psycopg2.UniqueViolation
+  - `update(conn, *, view_id, owner_id, name?, filter?, sort?, layout?, include_tag_nodes?)` — **WHERE id=? AND owner_id=?** 강제 (다른 사용자 view_id 만 알아도 수정 불가)
+  - `delete(conn, *, view_id, owner_id)` — 동일 WHERE 강제
+  - `get_by_id(conn, view_id)` — 공유 URL 진입점, owner 검증 없음
+  - `list_by_owner(conn, *, owner_id, page, page_size)` — owner 본인 목록 + total
+  - `count_by_owner(conn, owner_id)` — 상한 50 강제용
+
+### 6.4 `app.services.saved_views_service.SavedViewsService` ✅
+
+- `MAX_VIEWS_PER_USER = 50` 상수 (task2-5.md §7 R-03)
+- `create` — 상한 검증 → repository.create. UniqueViolation 잡아 409.
+- `update` / `delete` — repository.WHERE 결과가 None/False 면 404 (존재 유출 차단)
+- `get_for_share` — owner 검증 없음. 라우터 단의 `SavedViewResponse` 가 owner_id 자동 마스킹.
+
+### 6.5 API 표면 — `app.api.v1.saved_views` (5 endpoint)
+
+- `GET /api/v1/saved-views` — owner 본인 목록 (paginated, page_size 1~200)
+- `POST /api/v1/saved-views` — 정의 저장 (owner = actor)
+- `GET /api/v1/saved-views/{id}` — 공유 URL 진입점 (인증된 모든 사용자, owner_id 마스킹)
+- `PATCH /api/v1/saved-views/{id}` — owner 본인만
+- `DELETE /api/v1/saved-views/{id}` — owner 본인만
+
+### 6.6 단위 회귀
+
+`backend/tests/unit/test_saved_views_fg25.py` (18 case):
+- Schema validation 12: extra="forbid" / tag 정규화 / 길이 한도 / layout 화이트리스트 / 임의 키 거부 / **`owner_id` 응답 미포함 회귀**
+- Service 6: 상한 409 / 정상 진행 / **다른 owner update/delete 시 404 (존재 유출 차단)** / 공유 URL 은 owner 미체크
+
+### 6.7 ACL 정책 정합 (R2 단일 결정점)
+
+본 서비스는 saved view 의 정의만 다루며 documents ACL 결정점이 아님. view 적용 시 클라이언트가 정의를 풀어 `/documents` 또는 `/documents/graph` 호출 → 그 라우터가 viewer 의 ScopeProfile 로 재필터. R2 정합.
+
+---
+
+## 7. 도메인 함수 — S3 Phase 2 FG 2-6 (2026-05-11 도입)
+
+**Vault Import (옵시디언 zip → ProseMirror 변환)** — `docs/개발문서/S3/phase2/작업지시서/task2-6.md`.
+보안 영향 최상위 (zip bomb / path traversal / PII / 권한 우회).
+
+### 7.1 `app.services.vault_import_config` ✅
+
+6 환경변수 단일 정본:
+- `MAX_ZIP_BYTES` (100MB), `MAX_ENTRY_COUNT` (10000), `MAX_FILE_BYTES` (10MB)
+- `MAX_TOTAL_EXTRACTED_BYTES` (500MB), `MAX_COMPRESSION_RATIO` (100), `WORKER_TIMEOUT_SEC` (1800)
+
+### 7.2 `app.services.vault_zip_safety` ✅
+
+- `RejectionReason` Literal — 9 코드 (zip_bomb / entry_limit / file_too_large / path_traversal / symlink_entry / duplicate_path / zip_too_large / invalid_zip / encrypted_entry)
+- `VaultZipRejected(ValueError)` — reason + detail
+- `inspect_zip(zf) -> ZipInspectionResult` — 모든 엔트리 검증, 한 항목이라도 위반 시 즉시 raise
+- `_normalize_path(name)` — null byte / 절대경로 / `..` / `.` / 윈도우 드라이브 / NFC 정규화
+- `_is_symlink_entry(info)` — UNIX symlink 비트 (mode & 0o170000 == 0o120000)
+- `iter_safe_files(zf, inspection)` — 검증 통과한 파일만 streaming
+- `safe_open_zip(path)` — BadZipFile → invalid_zip
+- 단위 회귀: `test_vault_zip_safety_fg26.py` (20건 — task2-6.md §4 Step 1 의 10+ 공격 + edge)
+
+### 7.3 `app.services.markdown_to_prosemirror` ✅
+
+- `markdown_to_prosemirror(text) -> (doc, frontmatter)` — 옵시디언 markdown → ProseMirror doc + frontmatter dict
+- `split_frontmatter(text)` — `---` 블록 + **`yaml.safe_load` 만 사용** (R-04 임의 객체 차단)
+- 지원: heading 1-6 / paragraph / bulletList / orderedList / codeBlock / blockquote / horizontalRule / bold / italic / code / link / HashtagMark / WikiLinkMark
+- HashtagMark / WikiLinkMark 정규식은 FG 2-2 / FG 2-3 (`tag_rules`, `wikilink_rules`) 재사용 — 어휘 정합
+- 모든 block 노드 attrs.node_id 자동 부여 (NodeId TipTap extension 정합)
+- 단위 회귀: `test_markdown_to_prosemirror_fg26.py` (34건)
+
+### 7.4 `app.services.pii_scanner` ✅
+
+- `PIIKind = Literal["rrn", "email", "phone", "card"]`
+- `scan_text(text) -> ScanResult` — 후보 매칭 + checksum/Luhn 검증 (false positive 차단)
+- `mask_pii(text) -> (masked_text, ScanResult)` — **같은 길이 마스크로 in-place 치환** (span 보존) + **findings.masked_snippet 을 마스킹된 텍스트 기준 재생성** (context 누설 차단 — 한 PII 의 snippet 에 다른 raw PII 가 들어가지 않음)
+- `_validate_rrn(digits)` — 한국 주민번호 13자리 checksum
+- `_luhn_valid(digits)` — 카드 Luhn
+- 단위 회귀: `test_pii_scanner_fg26.py` (16건 — RRN/Email/Phone/Card × 2~3건 + 통합 + 마스킹 안전성)
+
+### 7.5 `app.services.vault_import_service.process_import` ✅
+
+- 호출자: 라우터 BackgroundTasks
+- 흐름: zip 안전 검증 → markdown 추출 → ProseMirror 변환 → PII 스캔 → report 작성 → status 'succeeded'
+- **임시 파일 finally 블록에서 즉시 삭제** (R-05)
+- 예외 시 `report.rejection = {reason, detail}` + status 'failed'
+- **본 1차 종결: dry-run 모드** — preview 만 작성. 실제 documents/folders/document_links 생성은 별 라운드 (`documents_service.create` + `draft_service.save_draft` + 폴더 트리 재현 통합)
+
+### 7.6 `app.repositories.vault_imports_repository.VaultImportsRepository` ✅
+
+- 테이블: `vault_imports` (Alembic `s3_p2_vault_imports`, 2026-05-11, head)
+- `create / get_by_id / list_by_owner / update_status` — update_status 가 owner_id keyword-only 로 cancel 시 owner 격리
+
+### 7.7 API 표면 — `app.api.v1.vault_imports` (4 endpoint)
+
+- `POST /api/v1/vault-imports` — multipart upload + scope_profile_id 강제. 업로드 단계에서 `MAX_ZIP_BYTES` streaming 검증 (413 즉시 반환)
+- `GET /api/v1/vault-imports` — owner 본인 목록
+- `GET /api/v1/vault-imports/{id}` — owner 본인 또는 admin
+- `POST /api/v1/vault-imports/{id}/cancel` — pending/running 만 → cancelled (owner 본인만, owner_id WHERE 강제)
+
+### 7.8 보안 정책 정합
+
+- **zip bomb**: 5중 방어 (zip 자체 크기 / 엔트리 수 / 개별 파일 / 총 추출 / 압축비) — `inspect_zip` 단일 결정점
+- **path traversal**: `_normalize_path` 가 null byte / 절대경로 / `..` / `.` / 윈도우 드라이브 / NFC 정규화 모두 검증
+- **symlink**: UNIX mode 비트 검사로 차단
+- **PII**: `safe_load` 만 사용 + 원문 저장 금지 + snippet context 도 마스킹
+- **권한 우회**: scope_profile_id 강제 (업로드 시 명시) + cancel 의 owner_id WHERE + 단건 GET 의 _can_access (admin 또는 본인)
+- **임시 파일 누락**: process_import finally + 업로드 실패 시 즉시 삭제

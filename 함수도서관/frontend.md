@@ -367,3 +367,166 @@
   - `toLocaleDateString` 17회, `new URLSearchParams` 18회, `URL.createObjectURL` 2회, `invalidateQueries` 79회, local `formatDate` 재선언 4건 (`@/lib/utils` 원본 제외)
   - debounce `setTimeout(..., 300)` 직접 매치는 0이었으나, `SEARCH_DEBOUNCE_MS` / `AUTOCOMPLETE_DEBOUNCE_MS` 상수로 이름이 달라져 매칭되지 않은 것. 실사용은 3곳 이상 확인 완료.
 - 후속 구현은 1.1 `formatDateTime` → 1.6 `useDebouncedValue` → 1.2 `toQueryString` 순으로 소규모 PR 분할 권장 (CONSTITUTION 제32조 Reviewable PRs).
+
+---
+
+## 4. 도메인 함수 / 컴포넌트 — S3 Phase 2 FG 2-3 (2026-05-10 도입)
+
+### 4.1 TipTap extension — `WikiLinkMark`
+
+- `WikiLinkMark` ✅ — `frontend/src/features/editor/tiptap/extensions/WikiLinkMark.ts`
+  - inline mark, `inclusive: false`
+  - schema attribute: `target` (string — wikilink target title, 비교 시 NFC 정규화)
+  - HTML 직렬화: `<span class="wikilink" data-wikilink-target="<title>">[[<title>]]</span>`
+  - InputRule / PasteRule: 서버 정규식과 동일 (`\[\[...]]`, alias 옵션)
+  - `attachWikiLinkClickHandler(root, onClick)` — 클릭 → backend `/documents/resolve` 호출 → 라우팅 분기
+  - notes: resolved_status 는 본문 mark attribute 에 박지 않음 (시간에 따라 변하므로). class modifier (`wikilink--resolved` / `wikilink--ambiguous` / `wikilink--missing`) 는 클라이언트가 mount 후 fetch 결과로 추가.
+  - 자동완성 popup (task2-3.md §2.1 (6)) 은 별 후속 — task5-3 mention typeahead 와 통합 권장.
+
+### 4.2 API 클라이언트 — `lib/api/wikilinks.ts`
+
+- `wikilinksApi.listBacklinks(documentId, { page, pageSize }) -> Promise<BacklinksPage>` ✅
+- `wikilinksApi.resolve(q, limit?) -> Promise<ResolveItem[]>` ✅
+  - notes: viewer Scope 외 출발 문서는 backend 가 응답에 포함하지 않음 (R2). NFC 정규화는 backend.
+
+### 4.3 Hook — `useBacklinks`
+
+- `useBacklinks(documentId, { page, pageSize, enabled }) -> UseQueryResult<BacklinksPage>` ✅
+  - source: `frontend/src/features/documents/hooks/useBacklinks.ts`
+  - staleTime 60s, refetchOnWindowFocus false
+
+### 4.4 컴포넌트 — `BacklinksPanel`
+
+- `<BacklinksPanel documentId, className? />` ✅
+  - source: `frontend/src/features/documents/BacklinksPanel.tsx`
+  - 마운트: `DocumentDetailPage.tsx` 우측 stack — `AnnotationsPanel` 다음 (Phase 5 FG 5-4 사이드바 재구조화 시 흡수 예정)
+  - collapsed by default, 페이지네이션 20건/page
+
+### 4.5 CSS — `.wikilink` 시각 스타일
+
+- `frontend/src/app/globals.css` 의 `Wikilink Mark` 섹션 (FG 2-3, 2026-05-10)
+  - 기본 (`.wikilink`): 옅은 brand 배경 + 점선 underline
+  - `.wikilink--ambiguous`: warning 색상 (호박색)
+  - `.wikilink--missing`: muted 색상 + dashed underline
+
+---
+
+## 5. 도메인 컴포넌트 / 훅 — S3 Phase 2 FG 2-4 (2026-05-10 도입)
+
+### 5.1 어휘 정본 — `features/documents/layout.ts`
+
+- `DocumentLayout = "list" | "tree" | "cards" | "graph"` ✅
+- `DOCUMENT_LAYOUTS: ReadonlyArray<DocumentLayout>` ✅
+- `DEFAULT_LAYOUT = "list"` ✅
+- `DOCUMENT_LAYOUT_META: Record<DocumentLayout, DocumentLayoutMeta>` ✅ — label / ariaLabel / shortcutKey
+- `parseLayout(raw: unknown): DocumentLayout | null` ✅ — URL / preferences raw 값 검증
+
+### 5.2 컴포넌트 — `LayoutToggle.tsx`
+
+- `<LayoutToggle current, onChange, className?, enableShortcuts? />` ✅
+  - role="radiogroup" + 각 버튼 role="radio" + aria-checked
+  - 단축키: ⌘/Ctrl+Alt+1/2/3/4 (각 layout). `isComposing` / input/textarea/contentEditable 포커스 시 무시
+  - 키보드 네비: ←/→ 화살표
+
+### 5.3 훅 — `useDocumentLayout`
+
+- `useDocumentLayout() -> { layout: DocumentLayout, setLayout: (next) => void }` ✅
+  - source: `frontend/src/features/documents/hooks/useDocumentLayout.ts`
+  - 우선순위: URL ?layout= → preferences.documents.default_layout → DEFAULT_LAYOUT
+  - 변경 시: URL replace + preferences PATCH (debounced via `useUserPreferences`)
+  - default 값은 URL 에서 제거 (clean URL)
+
+### 5.4 레이아웃 본체
+
+- `<CardsLayout items, className? />` ✅ — CSS Grid 카드 (반응형 1/2/3/4 columns)
+- `<TreeLayout />` 🟡 stub — 본격 구현 별 라운드 (잔여)
+- `<GraphView collectionId?, folderId?, tagName?, className? />` 🟡
+  - shell: `next/dynamic` 으로 `GraphView.impl` 청크 분리
+  - cytoscape 의존성 미설치 시 fallback 안내 메시지
+  - **본 세션 stub** — Step 5 (cytoscape 본체) 는 의존성 설치 후 별 라운드
+
+### 5.5 DocumentListPage 분기
+
+- `frontend/src/features/documents/DocumentListPage.tsx` 에 `useDocumentLayout` 호출 + LayoutToggle 마운트 + 본문 layout 별 분기
+- list / cards 는 같은 documents 데이터 공유 + 페이지네이션 공통
+- tree / graph 는 자체 데이터 / placeholder
+
+### 5.6 잔여 (운영자 P1 후속)
+
+- cytoscape / cytoscape-cose-bilkent / cytoscape-dagre / dagre 의존성 추가 (`npm install`)
+- GraphView.impl.tsx 본체 (cytoscape 통합 — 4 레이아웃 / 노드/엣지 스타일 / 클릭 라우팅)
+- 폐쇄망 번들 검증 (`next build` chunk 분석 / 네트워크 차단 / CSP)
+- TreeLayout 본체 (useFolders + 빈 폴더 표시 + 토글 상태 보존)
+- 500 노드 / 2000 엣지 5초 이내 렌더 측정
+- node:test ≥ 20건
+
+---
+
+## 6. 도메인 함수 / 컴포넌트 — S3 Phase 2 FG 2-5 (2026-05-10 도입)
+
+### 6.1 API 클라이언트 — `lib/api/saved_views.ts`
+
+- `savedViewsApi.list({ page, pageSize }) -> Promise<SavedViewsPage>` ✅
+- `savedViewsApi.get(viewId) -> Promise<SavedView>` ✅ (공유 URL 진입점, owner_id 응답 미포함)
+- `savedViewsApi.create(req) -> Promise<SavedView>` ✅
+- `savedViewsApi.update(viewId, req) -> Promise<SavedView>` ✅
+- `savedViewsApi.delete(viewId) -> Promise<void>` ✅
+
+### 6.2 React Query 훅 — `hooks/useSavedViews.ts`
+
+- `useSavedViewsList({ page, pageSize, enabled })` ✅
+- `useSavedView(viewId | null)` ✅
+- `useCreateSavedView()` / `useUpdateSavedView()` / `useDeleteSavedView()` ✅ — 자동 invalidate
+
+### 6.3 변환 유틸 — `savedViewQuery.ts`
+
+- `viewToQueryString(view: SavedView): string` ✅ — view 정의 → DocumentListPage URL query
+- `currentFiltersToView(filters, layout, name): SavedViewCreateRequest` ✅ — 현재 필터 → 저장 payload
+
+### 6.4 컴포넌트
+
+- `<SaveViewButton filters, layout, hasMeaningfulFilters />` ✅
+  - 모달 + 이름 입력 + 409 (UNIQUE / 상한) 인라인 에러 처리
+- `<SavedViewsMenu />` ✅
+  - 드롭다운 + 클릭 시 `viewToQueryString` → router.push
+  - 각 항목 ✕ 버튼 으로 삭제 (window.confirm 확인)
+  - 빈 상태 메시지 + 외부 클릭 닫기
+
+### 6.5 DocumentListPage 통합
+
+- `frontend/src/features/documents/DocumentListPage.tsx`:
+  - URL `?view=<id>` 가 있으면 `useSavedView(viewId)` fetch → useEffect 로 `viewToQueryString` 적용 (router.replace)
+  - view fetch 실패 (404 등) 시 `?view=` 자동 제거 + 사용자 안내 토스트
+  - **view 적용 중 안내 배너** — "권한 안의 결과만 표시됩니다" + 공유 URL 복사 + 해제 버튼 (R-A4 정합 — 구체 건수 노출 없음)
+  - toolbar 에 SavedViewsMenu + SaveViewButton 마운트
+
+### 6.6 어휘 정합
+
+- `SavedViewLayout` (lib/api/saved_views.ts) 의 4 값과 `DocumentLayout` (features/documents/layout.ts) 의 4 값이 정확히 같아야 한다 — 변경 시 양쪽 동시 수정 + backend `SavedViewLayout` Literal 도 함께.
+
+---
+
+## 7. 도메인 함수 / 컴포넌트 — S3 Phase 2 FG 2-6 (2026-05-11 도입)
+
+### 7.1 API 클라이언트 — `lib/api/vault_imports.ts`
+
+- `vaultImportsApi.upload(file, { scopeProfileId, applyPiiMask })` ✅ — multipart/form-data (api.post 가 JSON 만 지원하므로 `fetch` 직접)
+- `vaultImportsApi.list({ page, pageSize })` ✅
+- `vaultImportsApi.get(importId)` ✅
+- `vaultImportsApi.cancel(importId)` ✅
+- 타입: `VaultImport` / `VaultImportStatus` / `VaultImportReport` (frontmatter, preview, pii, warnings, rejection)
+
+### 7.2 페이지 — `features/vault-imports/VaultImportPage.tsx`
+
+- 드롭존 + Scope Profile ID 입력 + PII 자동 마스킹 체크박스
+- 업로드 후 1초 폴링 (`useEffect` + `setInterval`) — terminal status (succeeded/failed/cancelled) 까지
+- ReportPanel — PII 종류별 카운트 + 미리보기 상위 10개
+- 실패 시 `REJECTION_MESSAGES` 매핑으로 사용자 친화 메시지 (zip_bomb / path_traversal / file_too_large / 등 9 코드)
+- 라우트: `/vault-imports`
+
+### 7.3 잔여 (별 라운드)
+
+- 4 viewport UI 디자인 리뷰 (드롭존 + 진행률 + 리포트)
+- node:test ≥ 12건 (업로드 폼 / 폴링 / report 렌더 / REJECTION_MESSAGES 매핑)
+- Scope Profile 셀렉터 (현재는 raw UUID 입력 — UX 개선 별 라운드)
+- 진행률 시각화 (현재는 SkeletonBlock — 실 % 표시 별 라운드)
