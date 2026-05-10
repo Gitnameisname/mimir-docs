@@ -530,3 +530,123 @@
 - node:test ≥ 12건 (업로드 폼 / 폴링 / report 렌더 / REJECTION_MESSAGES 매핑)
 - Scope Profile 셀렉터 (현재는 raw UUID 입력 — UX 개선 별 라운드)
 - 진행률 시각화 (현재는 SkeletonBlock — 실 % 표시 별 라운드)
+
+---
+
+## 8. ProseMirror Mark 단일 정본 — S3 Phase 5 FG 5-1 (2026-05-11 도입)
+
+**Mark 통합 ADR** (`docs/개발문서/S3/phase5/산출물/Mark_통합_ADR.md`) §d 적용. 모든 inline mark 의 name / data-attribute / CSS class 의 string literal 인라인 사용 차단.
+
+### 8.1 정본 모듈 — `frontend/src/features/editor/tiptap/markNames.ts` ✅
+
+```ts
+// MARK NAMES (ProseMirror schema name)
+HASHTAG_MARK_NAME = "hashtag"
+WIKILINK_MARK_NAME = "wikilink"
+ANNOTATION_MARK_NAME = "annotation"   // task5-2 신설 시 사용
+
+// DATA ATTRIBUTES
+HASHTAG_DATA_ATTR = "data-tag"
+WIKILINK_DATA_ATTR = "data-wikilink-target"
+ANNOTATION_DATA_ATTR = "data-annotation-id"
+NODE_ID_DATA_ATTR = "data-node-id"
+
+// CSS CLASSES
+HASHTAG_CLASS = "tag-pill"
+WIKILINK_CLASS = "wikilink"
+ANNOTATION_CLASS = "annotation-mark"
+
+// inclusive 정책 (ADR §e)
+MARK_INCLUSIVE_DEFAULT = false  // 모든 inline mark 동일
+```
+
+### 8.2 적용 의무
+
+- HashtagMark / WikiLinkMark / NodeId 의 schema spec / parseHTML / renderHTML / attachClickHandler 가 **본 모듈 import**. string literal 인라인 금지.
+- AnnotationMark (task5-2 신설 시) 도 동일.
+- 변경 시 본 모듈 + 각 mark schema + `globals.css` + (해당 시) backend 파서 동시 수정 (ADR §f).
+
+### 8.3 단위 회귀 — `frontend/tests/MarkRoundtripFg51.test.tsx`
+
+15건 — markNames 정본 (4) + HashtagMark/WikiLinkMark/NodeId config 정합 (7) + click handler 정본 selector (3) + baseline (1).
+
+향후 정본 변경 시 본 회귀가 즉시 fail → 양쪽 동기화 강제.
+
+### 8.4 ADR §10 등록 순서 (직렬화 결정성 baseline)
+
+`DocumentTipTapEditor.tsx::useEditor` extensions 배열:
+
+```
+StarterKit → Placeholder → NodeId → HashtagMark → WikiLinkMark → AnnotationMark
+```
+
+ProseMirror schema 의 mark order 는 등록 순서 그대로 (ADR §c (i) 채택). round-trip 회귀 비교 시 mark 배열은 `{type, attrs}` set 비교 (순서 무시).
+
+---
+
+## 9. 멘션 typeahead — S3 Phase 5 FG 5-3 (2026-05-11 도입)
+
+### 9.1 API 클라이언트 — `lib/api/users_search.ts`
+
+- `usersSearchApi.search(q, limit?) -> Promise<UserSearchResponse>` ✅
+- 응답 타입 `UserSearchItem = { user_id, display_name }` — email/role/status 부재 (R-A4 모델 강제)
+
+### 9.2 React Query 훅 — `hooks/useUserSearch.ts`
+
+- `useUserSearch(query, limit?) -> UseQueryResult<UserSearchResponse>` ✅
+- 150ms debounce (`useDebouncedValue`) 후 fetch. 빈 query → fetch 안 함.
+- staleTime 30s, refetchOnWindowFocus false
+
+### 9.3 컴포넌트 — `MentionPopup.tsx`
+
+- `<MentionPopup query, open, onSelect, onClose, className? />` ✅
+- 키보드 네비: ↑/↓/Enter/Tab/Esc (window.keydown listener, isComposing 가드)
+- role="listbox" + role="option" + aria-selected
+- 빈 결과 메시지 / 로딩 상태
+
+### 9.4 잔여 (별 라운드)
+
+- **TipTap suggestion 통합** — 본문 에디터 안에서 `@` 입력 시 popup. `@tiptap/suggestion` 의존성 추가 (P1 + 폐쇄망 미러)
+- AnnotationsPanel 의 textarea 에 MentionPopup 마운트 + `@<prefix>` 패턴 감지 통합 — 별 라운드
+- 회귀 (node:test) ≥ 6건 — popup keyboard nav / debounce / R-A4 응답 keys 검증
+
+---
+
+## 10. DocumentSidebar — S3 Phase 5 FG 5-4 (2026-05-11 도입)
+
+### 10.1 어휘 정본 — `features/documents/sidebarTabs.ts`
+
+- `SidebarTab = "annotations" | "tags" | "contributors" | "links" | "meta"` ✅
+- `SIDEBAR_TABS` ReadonlyArray + `DEFAULT_SIDEBAR_TAB = "annotations"`
+- `SIDEBAR_TAB_META`: 각 탭의 label / ariaLabel
+- `parseSidebarTab(raw)`: URL raw 값 검증 (XSS / 타입 오염 방어)
+
+### 10.2 훅 — `useDocumentSidebar`
+
+- `useDocumentSidebar() -> { activeTab, setActiveTab }` ✅
+- URL `?sidebarTab=` 동기화 (default 값 자동 제거 — clean URL)
+- DocumentListPage 의 `?layout=` / `?view=` / `?tab=` 등과 prefix 충돌 없음 (`sidebarTab` 명시)
+
+### 10.3 컴포넌트 — `<DocumentSidebar />`
+
+- 5 탭 통합: AnnotationsPanel / DocumentAssignControls + TagChipsEditor / ContributorsPanel / BacklinksPanel / metaContent (children)
+- 키보드 네비: ←/→/Home/End (`nativeEvent.isComposing` 가드 — 한국어 IME 입력 중 무시)
+- ARIA: `role="tablist"` + `role="tab"` + `aria-selected` + `aria-controls` + `id` 매칭
+- 비활성 탭은 `hidden` (state 보존 — Pre-flight 결정)
+- R-06 (위젯 회귀 보호): 5 위젯에 props 그대로 통과 — 동작 변경 0
+
+### 10.4 FG 5-2 양방향 정합
+
+- DocumentDetailPage 의 `setSelectedAnnotationId` wrapper 가 selection 변화 시 `setActiveTab("annotations")` 자동 호출 — 본문 mark click → 사이드바 자동 활성화
+
+### 10.5 단위 회귀 — `frontend/tests/DocumentSidebarFg54.test.tsx`
+
+8건 — 어휘 정본 (4) + parseSidebarTab 안전성 (4)
+
+### 10.6 잔여 (별 라운드)
+
+- 4 viewport (drawer / bottom-sheet / FAB) — 현 단계 desktop 고정. mobile 은 본문 하단 stack fallback (CSS layout 의존)
+- VectorizationPanel / RagPanel / AgentProposalsTab 사이드바 흡수
+- UI 디자인 리뷰 ≥ 2회 (task5-4 §4 산출물 규약)
+- focus trap / collapsible drawer (mobile)
+- z-index 매트릭스 단일 정본 (`zIndex.ts`)

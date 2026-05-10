@@ -879,3 +879,46 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
 - **PII**: `safe_load` 만 사용 + 원문 저장 금지 + snippet context 도 마스킹
 - **권한 우회**: scope_profile_id 강제 (업로드 시 명시) + cancel 의 owner_id WHERE + 단건 GET 의 _can_access (admin 또는 본인)
 - **임시 파일 누락**: process_import finally + 업로드 실패 시 즉시 삭제
+
+---
+
+## 8. 도메인 함수 — S3 Phase 5 FG 5-3 (2026-05-11 도입)
+
+**멘션 typeahead 사용자 검색 (R-A4 ACL 누설 차단)** — `docs/개발문서/S3/phase5/작업지시서/task5-3.md`.
+
+### 8.1 `app.repositories.users_repository.UsersRepository.search_by_display_name_in_orgs` ✅
+
+- 시그니처: `(conn, *, viewer_user_id, query, limit) -> list[{user_id, display_name}]`
+- **`viewer_user_id` keyword-only required** (S2 ⑥ Scope 하드코딩 금지). positional 호출 시 TypeError.
+- SQL: `users JOIN user_org_roles target_uor` ↔ `JOIN user_org_roles viewer_uor` (같은 org_id 매칭). viewer 본인 제외 + `status='ACTIVE'` 만.
+- 반환 키 정확히 `{user_id, display_name}` 만 — email/role/status 누설 0.
+- ILIKE prefix wildcard escape (`%` `_` `\`).
+
+### 8.2 `app.api.v1.users_search` (1 endpoint)
+
+- `GET /api/v1/users?q=&limit=` ✅
+  - 인증된 사용자만 (any role ≥ VIEWER)
+  - `viewer_user_id` 는 **`actor.actor_id` 에서만 추출** — query/body 주입 차단
+  - `q` min_length=1 / max_length=64
+  - `limit` 1~50 (default 20)
+  - rate limit: `60/minute` (slowapi)
+  - audit log: q **prefix 자체 미저장** — `q_length` + `result_count` 만 기록 (제24조 PII)
+
+### 8.3 응답 모델 — `app.schemas.user_search.UserSearchResponse` ✅
+
+- `UserSearchItem`: `{user_id, display_name}` 만 (Pydantic 모델로 강제 — email/role/status 자동 차단)
+- `UserSearchResponse`: `items` + `items_total` + `items_truncated` (limit 도달 안내)
+
+### 8.4 단위 회귀 — `tests/unit/test_user_search_fg53.py` (9건)
+
+- Repository SQL: empty / JOIN 정합 / 파라미터 순서 / wildcard escape / 응답 키 정확성 (5)
+- Schema: 응답 모델이 email/role/status 미포함 / truncated flag (2)
+- R-A4 multi-org: 다른 org 사용자 미반환 / `viewer_user_id` keyword-only 강제 (2)
+
+### 8.5 보안 정책 정합
+
+- **R-A4 (ACL 누설 차단)**: `user_org_roles` JOIN 으로 자연 격리. SQL injection psycopg2 placeholder 차단 + ILIKE wildcard escape.
+- **PII (제24조)**: audit log 에 `q` 자체 미저장 (length + count 만)
+- **Rate limit**: 60/min slowapi
+- **응답 모델 강제**: Pydantic `UserSearchItem` 이 email/role/status 필드 자체 미정의 → 누설 가능성 0
+- **timing attack**: SQL `JOIN ... LIMIT` 가 인덱스 활용 (idx_user_org_roles_user / idx_users_email 등). 같은 query 길이에서 응답 시간 차이 미미 — 별 라운드 정량 측정 권장.
