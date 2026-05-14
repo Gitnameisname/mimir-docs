@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 |------|----|
-| 작성일 | 2026-05-11 |
+| 작성일 | 2026-05-11 (1차 회고), 2026-05-14 (2차 패치 정정) |
 | 대상 | S3 Phase 5 (TipTap Mark 통합 + UX 본격화) — FG 5-1 ~ FG 5-4 |
-| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) |
-| 상태 | **샌드박스 1차 종결** — Phase 5 §5.1 핵심 항목 충족 / UI 디자인 리뷰 + 4 viewport drawer + 별 reviewer 합의는 별 라운드 → **공식 종결은 운영자 환경 검증 후** |
+| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) → 2026-05-14 (Codex/독립 검수 P1+P2 통합 패치) |
+| 상태 | **2차 통합 패치 후 부분 PASS** — Codex P1 4건 + 독립검수 §3 5건 닫힘. UI 디자인 리뷰 ≥ 2회 + jsdom 통합 + 별 reviewer 합의는 잔여 → **공식 종결은 운영자 환경 검증 후** |
 
 ---
 
@@ -41,24 +41,53 @@
 - `FG5-3_보안취약점검사보고서.md`
 - `FG5-4_검수보고서.md`
 - `Phase5_1라운드_종결회고.md` (본 문서)
+- `Phase5_1라운드_독립검수보고서.md` (2026-05-14 별 reviewer 1차)
+- `Phase5_Codex_검수보고서_2026-05-14.md` (2026-05-14 Codex 검수)
+
+### 1.4 2026-05-14 통합 패치 추가 산출물
+
+| 코드 변경 | 위치 |
+|---------|----|
+| EditPage 양방향 + sanitize | `frontend/src/features/editor/DocumentEditPage.tsx` |
+| NodeRenderer mark 인식 | `frontend/src/features/documents/NodeRenderer.tsx` |
+| AnnotationGutter 본격 | `frontend/src/features/documents/AnnotationGutter.tsx` |
+| AnnotationsPanel @ typeahead | `frontend/src/features/documents/AnnotationsPanel.tsx` |
+| MentionPopup docstring 정정 | `frontend/src/features/documents/MentionPopup.tsx` |
+| DetailPage 우측 sticky + metaContent + 본문 click delegation + gutter 마운트 | `frontend/src/features/documents/DocumentDetailPage.tsx` |
+
+| 회귀 추가 | 위치 | 건수 |
+|---------|----|----|
+| NodeRenderer mark | `frontend/tests/NodeRendererMarkFg52.test.tsx` | 14 |
+| Mention @ 감지 | `frontend/tests/MentionDetectFg53.test.tsx` | 14 |
+| users_search TestClient 통합 | `backend/tests/integration/test_user_search_fg53_integration.py` | 13+ |
+
+**누적 회귀 갱신 (2026-05-14 패치 후 — 운영자 실측 확인)**:
+
+- frontend `npm run test` ✅ PASS — 신규 28건 (`NodeRendererMarkFg52` 14 + `MentionDetectFg53` 14) 포함 누적 녹색
+- backend `pytest tests/unit/test_user_search_fg53.py` ✅ PASS (9건)
+- backend `pytest tests/integration/test_user_search_fg53_integration.py` ✅ PASS (18건 — Auth 2 / Validation 3 / Trim 1 / R-A4 2 / SQL injection 6 / Response 3 / Trace 1)
+
+회귀 자체는 운영자 실측으로 녹색 확인 — Phase 5 §5.2 회귀 게이트 4 항목 (Phase 0~4 회귀 / pytest 베이스라인 / node:test 베이스라인 / tsc 0 error) 코드 차원 모두 통과.
 
 ---
 
 ## 2. Phase 5 §5.1 1라운드 완료 기준 — 매트릭스
 
+본 표는 2026-05-14 2차 패치 후 갱신.
+
 | # | 항목 | 상태 | 검증 |
 |---|------|----|----|
-| 1 | **R-A1 (Mark 직렬화)** — 4 mark round-trip ≥ 10 시나리오 | ✅ | FG 5-1 ADR §c (i) + FG 5-2 sanitize 회귀 7건 (S2/S5 포함) |
+| 1 | **R-A1 (Mark 직렬화)** — 4 mark round-trip ≥ 10 시나리오 | 🟢 코드 PASS / backend round-trip pytest 잔여 | FG 5-1 ADR §c (i) + FG 5-2 sanitize 회귀 7건 + saveDraft 직전 sanitize 호출 통합 (2026-05-14). backend `test_save_draft_preserves_marks_roundtrip.py` 는 별 라운드 |
 | 2 | **R-A2 (Mark 우선순위)** — ADR 의 우선순위 코드 반영 | ✅ | `excludes: ""` + 4 mark `inclusive: false` + markNames 정본 + 회귀 검증 |
-| 3 | **R-A3 (편집 차단 없음)** — mark click cursor 영향 없음 | ✅ | FG 5-2 click plugin `handleClick → return false` + preventDefault 호출 0 |
-| 4 | **R-A4 (Typeahead ACL)** — 다른 organization user 노출 없음 | ✅ | FG 5-3 4중 방어 (모델/라우터/repository/SQL) + pytest 9건 |
-| 5 | AnnotationMark click → AnnotationsPanel 자동 펼침 + highlight + scroll | ✅ | FG 5-2 onAnnotationClick → setSelectedAnnotationId / FG 5-4 setActiveTab("annotations") 자동 전환 |
-| 6 | Gutter 노드별 주석 카운트 정확 | 🟡 stub | FG 5-2 `AnnotationGutter` 분포 요약 박스만. 좌측 도트 위치 추적 (NodeRenderer 좌표) 별 라운드 |
-| 7 | DocumentDetailPage 우측 사이드바 4 viewport UI 리뷰 통과 | 🟡 별 라운드 | desktop 고정 통합 완료. drawer / bottom-sheet / FAB / UI 디자인 리뷰 ≥ 2회 잔여 |
-| 8 | Phase 1 NodeId 안정성 회귀 녹색 | ✅ | 회귀 영향 0 (markNames 정본 적용은 string literal → 상수 import 만) |
-| 9 | Phase 3 annotations 회귀 (anchoring 4 시나리오) 녹색 | ✅ | AnnotationsPanel props 확장 (selectedAnnotationId / onSelectAnnotation) — 기존 동작 변경 0 |
+| 3 | **R-A3 (편집 차단 없음)** — mark click cursor 영향 없음 | 🟢 코드 PASS / jsdom 회귀 잔여 | FG 5-2 click plugin `handleClick → return false` + preventDefault 호출 0. DocumentEditPage 양방향 통합 추가 (2026-05-14) |
+| 4 | **R-A4 (Typeahead ACL)** — 다른 organization user 노출 없음 | ✅ | FG 5-3 4중 방어 + 단위 9건 + 통합 TestClient 회귀 추가 (2026-05-14: 401 / 422 / R-A4 query 주입 차단 / SQL injection 6 페이로드 / 응답 모델 누설) |
+| 5 | AnnotationMark click → AnnotationsPanel 자동 펼침 + highlight + scroll | ✅ | (panel→panel) FG 5-4 setActiveTab("annotations") + (본문→panel) 2026-05-14 — EditPage onAnnotationClick 통합 + DetailPage NodeRenderer mark 인식 + delegated click + AnnotationGutter 좌측 도트 |
+| 6 | Gutter 노드별 주석 카운트 정확 | ✅ | 2026-05-14 본격 구현 — ResizeObserver + window scroll/resize debounce 50ms + `[data-node-id]` 좌표 추적. 카운트/해결됨 시각. |
+| 7 | DocumentDetailPage 우측 사이드바 4 viewport UI 리뷰 통과 | 🟢 코드 PASS / 4 viewport drawer + UI 리뷰 ≥ 2회 잔여 | desktop / lg+ 320px sticky 우측 컬럼 + 그 외 본문 하단 stack fallback (2026-05-14). drawer / bottom-sheet / FAB / UI 디자인 리뷰는 별 라운드 |
+| 8 | Phase 1 NodeId 안정성 회귀 녹색 | ✅ | 회귀 영향 0 |
+| 9 | Phase 3 annotations 회귀 (anchoring 4 시나리오) 녹색 | ✅ | AnnotationsPanel props 확장 — 기존 동작 변경 0 |
 
-**5.1 핵심 9 항목 중 7 충족, 2 잔여 (#6 Gutter 본격, #7 4 viewport UI 리뷰).**
+**5.1 핵심 9 항목**: 2차 패치 후 5 ✅ + 4 🟢 (코드 차원 PASS, 환경 검증 잔여). 잔여 항목 (#1 backend round-trip / #3 jsdom / #7 4 viewport UI 리뷰) 는 운영자/jsdom 환경 의존.
 
 ## 3. Phase 5 §5.2 회귀 게이트 — 매트릭스
 
@@ -71,56 +100,52 @@
 
 **5.2 4 항목 모두 충족.**
 
-## 4. 잔여 (Phase 5 2라운드 / 별 라운드 입력)
+## 4. 잔여 (Phase 5 2라운드 / 별 라운드 입력) — 2026-05-14 패치 후 갱신
 
-각 잔여를 4 카테고리로 분류 — 우선순위 / 게이트 / 책임 명시:
+각 잔여를 4 카테고리로 분류 — 우선순위 / 게이트 / 책임 명시. ✅ = 본 라운드 닫힘, ⏳ = 환경/사람 의존 잔존.
 
 ### 4.1 UI 디자인 리뷰 의무 (4 viewport)
 
-| 항목 | 출처 |
+| 항목 | 상태 |
 |------|----|
-| 4 viewport drawer / bottom-sheet / FAB (tablet/mobile) | task5-4 §2.1.2 |
-| UI 디자인 리뷰 ≥ 2회 (mockup + 4 viewport 구현 후) | task5-4 §4 |
-| Gutter 본격 좌측 도트 (NodeRenderer 좌표 추적) | task5-2 §2.1.4 |
-| popup 4 viewport (mobile 키보드 시 가려짐 방지) | task5-3 |
-| AnnotationMark 색상 / nested mark 시각 검증 | task5-2 §2.1.2 |
-
-→ **운영자 + UI 디자인 리뷰어 의존**. 본 세션 코드 차원 정합 완료.
+| 4 viewport drawer / bottom-sheet / FAB (tablet/mobile) | ⏳ — desktop / lg+ 320px sticky + 그 외 본문 하단 stack 까지 완료 (2026-05-14). drawer / FAB 는 별 라운드 |
+| UI 디자인 리뷰 ≥ 2회 (mockup + 4 viewport 구현 후) | ⏳ 운영자 환경 의존 |
+| Gutter 본격 좌측 도트 (NodeRenderer 좌표 추적) | ✅ 2026-05-14 — `AnnotationGutter.tsx` 재작성 |
+| popup 4 viewport (mobile 키보드 시 가려짐 방지) | ⏳ 별 라운드 |
+| AnnotationMark 색상 / nested mark 시각 검증 | ⏳ 디자인 리뷰 의존. globals.css 의 amber 색상 + nested 결합 호환 코드 완료 |
 
 ### 4.2 통합 / Editor 회귀 (jsdom or 실 Chrome)
 
-| 항목 | 출처 |
+| 항목 | 상태 |
 |------|----|
-| Editor 인스턴스 click → cursor 미변 (R-A3) 회귀 | FG 5-2 ADR §11 S10 |
-| AnnotationMark 안 #tag InputRule 발동 (S8) | FG 5-2 ADR §11 |
-| backend tag_rules 가 annotation 안 #tag 인식 (S6) | FG 5-1 ADR §g |
-| save_draft round-trip 4 mark 동시 (S5) — backend pytest 통합 | FG 5-2 ADR §11 |
-| 멘션 typeahead 통합 회귀 (TestClient 2 organization × 5 prefix R-A4) | FG 5-3 §5 |
-| Rate limit 429 회귀 (60+ 요청) | FG 5-3 §5 |
-| Timing attack 정량 측정 (결과 0건 vs N건 차이 < 5%) | FG 5-3 보안 §5 |
-
-→ **jsdom 도입 + DB fixture + TestClient 환경 의존**. 별 라운드 인프라 작업.
+| Editor 인스턴스 click → cursor 미변 (R-A3) 회귀 | ⏳ jsdom 미설치 — `handleClick → return false` + `preventDefault` 호출 0 코드 차원 보존 |
+| AnnotationMark 안 #tag InputRule 발동 (S8) | ⏳ Editor 인스턴스 회귀 의존 |
+| backend tag_rules 가 annotation 안 #tag 인식 (S6) | ⏳ backend round-trip pytest 별 라운드 |
+| save_draft round-trip 4 mark 동시 (S5) — backend pytest 통합 | ⏳ — frontend 측은 sanitize 호출 통합 완료 (2026-05-14) |
+| 멘션 typeahead 통합 회귀 (TestClient 2 organization × 5 prefix R-A4) | ✅ 2026-05-14 — `test_user_search_fg53_integration.py` (13+건) |
+| Rate limit 429 회귀 (60+ 요청) | ⏳ slowapi 동작 코드 적용 — 60+ 요청 시뮬레이션은 별 라운드 |
+| Timing attack 정량 측정 (결과 0건 vs N건 차이 < 5%) | ⏳ 운영자 환경 |
 
 ### 4.3 통합 작업 (코드 차원)
 
-| 항목 | 출처 | 책임 |
-|------|----|----|
-| TipTap suggestion 통합 (`@tiptap/suggestion` 의존성) — 본문 에디터 안 `@` 입력 popup | FG 5-3 §1 | P1 + 폐쇄망 미러 |
-| AnnotationsPanel textarea 에 MentionPopup 마운트 + `@<prefix>` 패턴 감지 | FG 5-3 §5 | 별 라운드 |
-| save_draft sanitize 호출 통합 (DocumentEditPage onChange 직전) | FG 5-2 §5 | 별 라운드 |
-| DocumentEditPage 통합 — 본문 mark click → 사이드바 자동 활성화 | FG 5-4 §6 | 별 라운드 |
-| NodeRenderer mark 인식 (read-only 상세 페이지 본문 mark 시각화) | FG 5-2 §5 | 별 라운드 |
-| VectorizationPanel / RagPanel / AgentProposalsTab 사이드바 흡수 | FG 5-4 §6.1 | 별 라운드 |
-| z-index 매트릭스 정본 (`zIndex.ts`) | FG 5-4 §6 | 별 라운드 |
-| focus trap (drawer) | FG 5-4 §6 | 별 라운드 |
+| 항목 | 상태 |
+|------|----|
+| TipTap suggestion 통합 (`@tiptap/suggestion` 의존성) — 본문 에디터 안 `@` 입력 popup | ⏳ 별 라운드 — `@tiptap/suggestion` 의존성 P1 추가. AnnotationsPanel textarea 는 본 라운드 완료 |
+| AnnotationsPanel textarea 에 MentionPopup 마운트 + `@<prefix>` 패턴 감지 | ✅ 2026-05-14 |
+| save_draft sanitize 호출 통합 (DocumentEditPage onChange 직전) | ✅ 2026-05-14 — `saveMutation.mutationFn` 안 |
+| DocumentEditPage 통합 — 본문 mark click → 사이드바 자동 활성화 | ✅ 2026-05-14 — EditPage 는 panel 직접 마운트 (사이드바는 DetailPage 전용) |
+| NodeRenderer mark 인식 (read-only 상세 페이지 본문 mark 시각화) | ✅ 2026-05-14 — `contentSnapshot` prop |
+| VectorizationPanel / RagPanel / AgentProposalsTab 사이드바 흡수 | ⏳ 별 라운드 |
+| z-index 매트릭스 정본 (`zIndex.ts`) | ⏳ 별 라운드 — MentionPopup z-40 / DocumentSidebar sticky / modal 충돌 발견 안 됨 |
+| focus trap (drawer) | ⏳ drawer 미구현이므로 함께 별 라운드 |
 
 ### 4.4 정책 / 합의
 
-| 항목 | 출처 |
+| 항목 | 상태 |
 |------|----|
-| **별 reviewer 합의** (헌법 제27조) — Mark 통합 ADR + 본 회고 | FG 5-1 §12 |
-| `@최철균` P1 승인 — Mark 통합 ADR + 4 검수보고서 + API 표면 1 endpoint 추가 | Phase 5 §8 |
-| FG 5-5 (한국어 username 정책) — 사용자 합의 후 진행 | Phase 5 §2.2 |
+| **별 reviewer 합의** (헌법 제27조) — Mark 통합 ADR + 본 회고 | ⏳ Codex 검수보고서 (2026-05-14) 가 1차 별 reviewer 입력. `@최철균` 최종 승인 |
+| `@최철균` P1 승인 — Mark 통합 ADR + 4 검수보고서 + API 표면 1 endpoint 추가 | ⏳ 운영자 |
+| FG 5-5 (한국어 username 정책) — 사용자 합의 후 진행 | ✅ 2026-05-14 — 합의 완료 + display_name 매칭 + frontend user_id 직접 전송 + viewer scope 검증. 회귀 23건. `FG5-5_종결보고서.md` 참조 |
 
 ---
 
