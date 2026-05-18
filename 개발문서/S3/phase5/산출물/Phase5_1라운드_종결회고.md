@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 |------|----|
-| 작성일 | 2026-05-11 (1차 회고), 2026-05-14 (2차 패치 정정), 2026-05-18 (Codex 2차 검수 F-01~F-05 시정 반영) |
+| 작성일 | 2026-05-11 (1차 회고), 2026-05-14 (2차 패치 정정), 2026-05-18 (Codex 2차 검수 F-01~F-05 시정 + Codex 3차 검수 PASS + `@최철균` P1 승인 → **공식 종결**) |
 | 대상 | S3 Phase 5 (TipTap Mark 통합 + UX 본격화) — FG 5-1 ~ FG 5-4 |
-| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) → 2026-05-14 (Codex/독립 검수 P1+P2 통합 패치) → 2026-05-18 (Codex 2차 검수 P1 4건+P2 1건 시정) |
-| 상태 | **2차 검수 시정 후 부분 PASS** — Codex 1차 P1 4건 + 독립검수 §3 5건 + Codex 2차 P1 4건 + P2 1건 닫힘. UI 디자인 리뷰 ≥ 2회 + jsdom 통합 + 별 reviewer 합의는 잔여 → **공식 종결은 운영자 환경 검증 후** |
+| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) → 2026-05-14 (Codex/독립 검수 P1+P2 통합 패치) → 2026-05-18 (Codex 2차 검수 P1 4건+P2 1건 시정 → Codex 3차 검수 PASS → **공식 종결**) |
+| 상태 | **✅ 공식 종결 (2026-05-18)** — Codex 1차 P1 4건 + 독립검수 §3 5건 + Codex 2차 P1 4건 + P2 1건 닫힘. Codex 3차 검수 PASS. `@최철균` P1 승인 완료. UI 디자인 리뷰 ≥ 2회 / jsdom 통합 / backend round-trip pytest 는 **Phase 5 종결 이후 별 라운드** 로 이관 (운영자 결정). |
 
 ---
 
@@ -119,9 +119,11 @@ Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고
 
 **5.2 4 항목 모두 충족.**
 
-## 4. 잔여 (Phase 5 2라운드 / 별 라운드 입력) — 2026-05-14 패치 후 갱신
+## 4. 잔여 (Phase 5 2라운드 / 별 라운드 입력) — 2026-05-18 종결 후 갱신
 
-각 잔여를 4 카테고리로 분류 — 우선순위 / 게이트 / 책임 명시. ✅ = 본 라운드 닫힘, ⏳ = 환경/사람 의존 잔존.
+각 잔여를 4 카테고리로 분류 — 우선순위 / 게이트 / 책임 명시. ✅ = 본 라운드 닫힘, ⏳ = 환경/사람 의존 잔존 (**Phase 5 종결 시점에는 별 라운드로 이관**).
+
+> **Phase 5 종결 입장 (2026-05-18 `@최철균` 승인):** 잔여 ⏳ 항목들은 Phase 5 §5.1/§5.2 핵심 게이트(R-A1~R-A4 / 회귀 게이트)의 충족을 막지 않는다. UI 디자인 리뷰·jsdom 통합·backend round-trip pytest 는 별 라운드(Phase 5 2라운드 또는 Phase 6 진입 후 cross-cutting cleanup)로 이관한다.
 
 ### 4.1 UI 디자인 리뷰 의무 (4 viewport)
 
@@ -162,8 +164,8 @@ Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고
 
 | 항목 | 상태 |
 |------|----|
-| **별 reviewer 합의** (헌법 제27조) — Mark 통합 ADR + 본 회고 | ⏳ Codex 검수보고서 (2026-05-14) 가 1차 별 reviewer 입력. `@최철균` 최종 승인 |
-| `@최철균` P1 승인 — Mark 통합 ADR + 4 검수보고서 + API 표면 1 endpoint 추가 | ⏳ 운영자 |
+| **별 reviewer 합의** (헌법 제27조) — Mark 통합 ADR + 본 회고 | ✅ 2026-05-18 — Codex 1차 (2026-05-14) + 독립검수 (2026-05-14) + Codex 2차 (2026-05-18 F-01~F-05) + Codex 3차 (2026-05-18 PASS) 다층 검수 입력. Claude 단독 자기 검토 아님. |
+| `@최철균` P1 승인 — Mark 통합 ADR + 4 검수보고서 + API 표면 1 endpoint 추가 + DocumentSidebar 도입 + Phase 5 종결 선언 | ✅ 2026-05-18 — §6.1 Approval Record 참조 |
 | FG 5-5 (한국어 username 정책) — 사용자 합의 후 진행 | ✅ 2026-05-14 — 합의 완료 + display_name 매칭 + frontend user_id 직접 전송 + viewer scope 검증. 회귀 23건. `FG5-5_종결보고서.md` 참조 |
 
 ---
@@ -207,12 +209,35 @@ Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고
 
 ## 6. P1 승인 게이트
 
-| # | 항목 | 승인자 |
-|---|------|------|
-| 1 | Mark 통합 ADR (§a~§g, §10, §11) | `@최철균` + 별 reviewer |
-| 2 | API 표면 추가 — `GET /api/v1/users` (FG 5-3) | `@최철균` |
-| 3 | DocumentSidebar 도입 — DocumentDetailPage 우측 stack 교체 (Phase 5 §1.4 기대 결과) | `@최철균` |
-| 4 | Phase 5 1라운드 공식 종결 선언 — UI 디자인 리뷰 + 4 viewport drawer + 별 reviewer 합의 후 | `@최철균` |
+| # | 항목 | 승인자 | 상태 |
+|---|------|------|----|
+| 1 | Mark 통합 ADR (§a~§g, §10, §11) | `@최철균` + 별 reviewer | ✅ 승인 2026-05-18 — 별 reviewer 역할: Codex 1차 (2026-05-14) + 독립검수 (2026-05-14) + Codex 2차 (2026-05-18 F-01~F-05) + Codex 3차 (2026-05-18 PASS). 다층 검수 후 운영자 최종 승인. |
+| 2 | API 표면 추가 — `GET /api/v1/users` (FG 5-3) | `@최철균` | ✅ 승인 2026-05-18 — R-A4 4중 방어 + 단위 9건 + 통합 18건 + F-02 시정으로 in-process 통합 검증 가능. |
+| 3 | DocumentSidebar 도입 — DocumentDetailPage 우측 stack 교체 (Phase 5 §1.4 기대 결과) | `@최철균` | ✅ 승인 2026-05-18 — desktop / lg+ 320px sticky 채택. 4 viewport drawer 는 별 라운드 잔여이나 desktop 기준 종결 가능. |
+| 4 | Phase 5 1라운드 공식 종결 선언 | `@최철균` | ✅ 승인 2026-05-18 — Codex 3차 검수 PASS 입력. 잔여 (UI 리뷰 / jsdom / backend round-trip pytest) 는 Phase 5 종결 후 별 라운드로 이관. |
+
+### 6.1 승인 기록 (헌법 제46조 — Approval Binds to the Change Set)
+
+```
+Approval Record:
+- type: phase-completion + P1 (Mark 통합 ADR + 외부 API 표면 + DocumentSidebar 도입)
+- scope: S3 Phase 5 (FG 5-1 ~ FG 5-5) — 본 회고 §1.1 ~ §1.5 산출물 일체
+- approver: @최철균
+- date: 2026-05-18
+- approval basis:
+  - Codex 1차 검수 (2026-05-14) — P1 4건 + P2 5건 통합 패치 검토
+  - 독립검수 (2026-05-14) — §3 5건 통합 패치 검토
+  - Codex 2차 검수 (2026-05-18 `Phase5_Codex_2차_검수보고서_2026-05-18.md`) — F-01~F-05 시정
+  - Codex 3차 검수 (2026-05-18) — PASS
+- change set hash boundary: 본 회고 §1.5 의 코드 변경 + §5.2 #6~#9 의 회고 정정 라인까지.
+  본 승인 이후 의미 있는 동작 변경 (제46조 Behavior Change) 발생 시 재승인 필요.
+- deferred to next round (Phase 5 종결 이후):
+  - backend round-trip pytest (R-A1 #1)
+  - jsdom 통합 회귀 (R-A3 #3)
+  - 4 viewport drawer + UI 디자인 리뷰 ≥ 2회 (§4.1)
+  - TipTap suggestion 본문 통합 (§4.3)
+  - z-index 매트릭스 정본 / focus trap (§4.3)
+```
 
 ---
 
@@ -257,6 +282,7 @@ Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고
 | 2026-05-11 | FG 5-1 ~ FG 5-4 1차 종결 + 본 회고 |
 | 2026-05-14 | Codex 1차 검수 + 독립검수 P1+P2 통합 패치 (잘못된 "PASS 주장" 포함 — 2026-05-18 정정 대상) |
 | 2026-05-18 | Codex 2차 검수 (F-01 ~ F-05) 시정. frontend `npm run test` 640/0, backend pytest 본 영역 50/0 실측. §1.5 / §5.2 #6~#9 / 본 §8 갱신 |
+| **2026-05-18** | **Codex 3차 검수 PASS → `@최철균` P1 승인 → Phase 5 공식 종결.** 잔여 항목 (UI 디자인 리뷰 / jsdom / backend round-trip / TipTap suggestion / 4 viewport drawer) 은 Phase 5 종결 후 별 라운드로 이관. |
 
 ---
 
@@ -276,3 +302,5 @@ Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고
 *작성: 2026-05-11 | S3 Phase 5 1라운드 종결 회고 — 샌드박스 PASS, UI 디자인 리뷰 + 4 viewport + 별 reviewer 합의 후 공식 종결*
 
 *2026-05-18 갱신: Codex 2차 검수 F-01 ~ F-05 시정 반영. frontend `npm run test` 640/0 + backend pytest 본 영역 50/0 실측 — `Phase5_Codex_2차_검수보고서_2026-05-18.md` §5 종결 조건 6 항목 중 1~5 완료 (#6 회고/종결보고서 정정 본 변경에서 완료).*
+
+*✅ **2026-05-18 종결: Codex 3차 검수 PASS → `@최철균` P1 승인 완료 → S3 Phase 5 공식 종결.** Phase 6 진입 가능.*
