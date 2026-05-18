@@ -2,10 +2,10 @@
 
 | 항목 | 값 |
 |------|----|
-| 작성일 | 2026-05-11 (1차 회고), 2026-05-14 (2차 패치 정정) |
+| 작성일 | 2026-05-11 (1차 회고), 2026-05-14 (2차 패치 정정), 2026-05-18 (Codex 2차 검수 F-01~F-05 시정 반영) |
 | 대상 | S3 Phase 5 (TipTap Mark 통합 + UX 본격화) — FG 5-1 ~ FG 5-4 |
-| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) → 2026-05-14 (Codex/독립 검수 P1+P2 통합 패치) |
-| 상태 | **2차 통합 패치 후 부분 PASS** — Codex P1 4건 + 독립검수 §3 5건 닫힘. UI 디자인 리뷰 ≥ 2회 + jsdom 통합 + 별 reviewer 합의는 잔여 → **공식 종결은 운영자 환경 검증 후** |
+| 진행 기간 | 2026-04-27 (작업지시서 작성) → 2026-05-11 (1차 종결) → 2026-05-14 (Codex/독립 검수 P1+P2 통합 패치) → 2026-05-18 (Codex 2차 검수 P1 4건+P2 1건 시정) |
+| 상태 | **2차 검수 시정 후 부분 PASS** — Codex 1차 P1 4건 + 독립검수 §3 5건 + Codex 2차 P1 4건 + P2 1건 닫힘. UI 디자인 리뷰 ≥ 2회 + jsdom 통합 + 별 reviewer 합의는 잔여 → **공식 종결은 운영자 환경 검증 후** |
 
 ---
 
@@ -24,11 +24,11 @@
 
 | 메트릭 | 값 |
 |-------|----|
-| **frontend node:test** | **587건 녹색** (Phase 5 신규 36건) |
-| **backend pytest** | **9건 녹색** (FG 5-3 R-A4 회귀) |
-| **frontend tsc** | **0 error** (본 Phase 신규/변경 코드) |
-| **신규 파일** | 19 (frontend 13 + backend 4 + 문서 2 — 산출물 디렉토리 별도) |
-| **산출 문서** | 8 (Mark_inventory + ADR + 4 검수보고서 + 보안보고서 + Decoration 방식) |
+| **frontend node:test** | **640건 녹색 / 0 fail** (2026-05-18 실측 — 2차 검수 F-01 시정 후 처음 게이트 통과. F-04 회귀 3건 + F-05 회귀 5건 + DocumentLayoutFg24 assertion 정정 1건 포함) |
+| **backend pytest** (본 Phase 영역) | **50건 녹색 / 0 fail** (FG 5-3 단위 9 + FG 5-3 통합 18 + FG 5-5 단위 23 — 2026-05-18 실측) |
+| **frontend tsc** | **0 error** (본 Phase 신규/변경 코드 + tsconfig.test.json TS6 호환 — F-01 시정) |
+| **신규 파일** | 20 (frontend 14 + backend 4 + 문서 2 — F-05 시정 `sanitizeForSave.ts` 추가) |
+| **산출 문서** | 9 (Mark_inventory + ADR + 4 검수보고서 + 보안보고서 + Decoration 방식 + Codex 2차 검수보고서) |
 
 ### 1.3 산출물 목록 (`docs/개발문서/S3/phase5/산출물/`)
 
@@ -43,6 +43,7 @@
 - `Phase5_1라운드_종결회고.md` (본 문서)
 - `Phase5_1라운드_독립검수보고서.md` (2026-05-14 별 reviewer 1차)
 - `Phase5_Codex_검수보고서_2026-05-14.md` (2026-05-14 Codex 검수)
+- `Phase5_Codex_2차_검수보고서_2026-05-18.md` (2026-05-18 Codex 2차 검수 — P1 4건 + P2 1건, 본 회고의 시정 입력)
 
 ### 1.4 2026-05-14 통합 패치 추가 산출물
 
@@ -61,13 +62,29 @@
 | Mention @ 감지 | `frontend/tests/MentionDetectFg53.test.tsx` | 14 |
 | users_search TestClient 통합 | `backend/tests/integration/test_user_search_fg53_integration.py` | 13+ |
 
-**누적 회귀 갱신 (2026-05-14 패치 후 — 운영자 실측 확인)**:
+### 1.5 2026-05-18 Codex 2차 검수 시정 산출물 (F-01 ~ F-05)
 
-- frontend `npm run test` ✅ PASS — 신규 28건 (`NodeRendererMarkFg52` 14 + `MentionDetectFg53` 14) 포함 누적 녹색
+Codex 2차 검수 (`Phase5_Codex_2차_검수보고서_2026-05-18.md`) 가 보고한 P1 4건 + P2 1건 시정.
+
+| 결함 | 시정 내용 | 코드 변경 | 회귀 추가 |
+|------|---------|---------|---------|
+| **F-01 [P1]** frontend tsc TS5107 deprecation | `moduleResolution: "node10"` 명시 + `ignoreDeprecations: "6.0"` | `frontend/tsconfig.test.json` | 기존 회귀 활성화로 검증 |
+| **F-02 [P1]** users_search 통합 테스트 실 DB 접속 | 라우터를 `db_dependency` 의존성으로 변경 + 테스트에서 `app.dependency_overrides` 로 in-process override | `backend/app/api/v1/users_search.py`, `backend/tests/integration/test_user_search_fg53_integration.py` | 기존 18건 재기록 (실 DB 접속 없음) |
+| **F-03 [P1]** FG 5-5 unit fixture `role_name` 누락 | stub row 의 `role` → `role_name` (`_row_to_user` 가 직접 인덱싱) | `backend/tests/unit/test_annotations_mentions_fg55.py` | 23건 재기록 |
+| **F-04 [P1]** NodeRenderer section 재귀 mark 끊김 | 자식 NodeRenderer 호출에 `contentSnapshot` 그대로 전달 + NodeBlock prop 추가 | `frontend/src/features/documents/NodeRenderer.tsx` | `NodeRendererMarkFg52.test.tsx` §D 3건 (실 렌더 결과 HTML 검증) |
+| **F-05 [P2]** sanitize 가 annotation loading 중 정상 mark 삭제 | `useDocumentAnnotations` 가 `isLoaded` 노출 + `sanitizeForSave` 가드 헬퍼 도입 | `frontend/src/features/documents/hooks/useDocumentAnnotations.ts`, `frontend/src/features/editor/sanitizeForSave.ts` (신규), `frontend/src/features/editor/DocumentEditPage.tsx` | `SanitizeForSaveFg52F05.test.tsx` 5건 |
+| 부수 시정 | `DocumentLayoutFg24` assertion 작성 오류 (`?? []` 이 빈 배열 만들고 undefined 와 비교) | `frontend/tests/DocumentLayoutFg24.test.tsx` | 기존 회귀 정상화 |
+
+**누적 회귀 갱신 (2026-05-18 Codex 2차 검수 시정 후 — 실측)**:
+
+- frontend `npm run test` ✅ PASS — **640건 / 0 fail** (2026-05-18). 2026-05-14 패치 신규 28건에 더해 F-04 회귀 3건 (`NodeRendererMarkFg52` — section 재귀 mark 렌더), F-05 회귀 5건 (`SanitizeForSaveFg52F05` — annotation loading 가드) 추가.
 - backend `pytest tests/unit/test_user_search_fg53.py` ✅ PASS (9건)
-- backend `pytest tests/integration/test_user_search_fg53_integration.py` ✅ PASS (18건 — Auth 2 / Validation 3 / Trim 1 / R-A4 2 / SQL injection 6 / Response 3 / Trace 1)
+- backend `pytest tests/integration/test_user_search_fg53_integration.py` ✅ PASS **(18건 — 2026-05-18 실 검증)**. F-02 시정으로 `db_dependency` override 가 적용되어 외부 DB 접속 없이 in-process 통합 검증.
+- backend `pytest tests/unit/test_annotations_mentions_fg55.py` ✅ PASS (23건 — F-03 시정으로 `role_name` 컬럼 정합).
 
-회귀 자체는 운영자 실측으로 녹색 확인 — Phase 5 §5.2 회귀 게이트 4 항목 (Phase 0~4 회귀 / pytest 베이스라인 / node:test 베이스라인 / tsc 0 error) 코드 차원 모두 통과.
+회귀 자체는 실측으로 녹색 확인 — Phase 5 §5.2 회귀 게이트 4 항목 (Phase 0~4 회귀 / pytest 베이스라인 / node:test 베이스라인 / tsc 0 error) 모두 통과.
+
+> ⚠️ 2026-05-14 항목의 "운영자 실측 확인" 문구는 2026-05-18 Codex 2차 검수 (F-01~F-05) 에 의해 **재현 실패**로 정정되었다. 본 절의 수치는 F-01~F-05 시정 후 동일 환경에서 다시 측정한 결과다.
 
 ---
 
@@ -77,17 +94,19 @@
 
 | # | 항목 | 상태 | 검증 |
 |---|------|----|----|
-| 1 | **R-A1 (Mark 직렬화)** — 4 mark round-trip ≥ 10 시나리오 | 🟢 코드 PASS / backend round-trip pytest 잔여 | FG 5-1 ADR §c (i) + FG 5-2 sanitize 회귀 7건 + saveDraft 직전 sanitize 호출 통합 (2026-05-14). backend `test_save_draft_preserves_marks_roundtrip.py` 는 별 라운드 |
+| 1 | **R-A1 (Mark 직렬화)** — 4 mark round-trip ≥ 10 시나리오 | 🟢 코드 PASS / backend round-trip pytest 잔여 | FG 5-1 ADR §c (i) + FG 5-2 sanitize 회귀 7건 + saveDraft 직전 sanitize 호출 통합 (2026-05-14) + F-05 시정으로 loading-state 가드 (2026-05-18). backend `test_save_draft_preserves_marks_roundtrip.py` 는 별 라운드 |
 | 2 | **R-A2 (Mark 우선순위)** — ADR 의 우선순위 코드 반영 | ✅ | `excludes: ""` + 4 mark `inclusive: false` + markNames 정본 + 회귀 검증 |
 | 3 | **R-A3 (편집 차단 없음)** — mark click cursor 영향 없음 | 🟢 코드 PASS / jsdom 회귀 잔여 | FG 5-2 click plugin `handleClick → return false` + preventDefault 호출 0. DocumentEditPage 양방향 통합 추가 (2026-05-14) |
-| 4 | **R-A4 (Typeahead ACL)** — 다른 organization user 노출 없음 | ✅ | FG 5-3 4중 방어 + 단위 9건 + 통합 TestClient 회귀 추가 (2026-05-14: 401 / 422 / R-A4 query 주입 차단 / SQL injection 6 페이로드 / 응답 모델 누설) |
-| 5 | AnnotationMark click → AnnotationsPanel 자동 펼침 + highlight + scroll | ✅ | (panel→panel) FG 5-4 setActiveTab("annotations") + (본문→panel) 2026-05-14 — EditPage onAnnotationClick 통합 + DetailPage NodeRenderer mark 인식 + delegated click + AnnotationGutter 좌측 도트 |
-| 6 | Gutter 노드별 주석 카운트 정확 | ✅ | 2026-05-14 본격 구현 — ResizeObserver + window scroll/resize debounce 50ms + `[data-node-id]` 좌표 추적. 카운트/해결됨 시각. |
+| 4 | **R-A4 (Typeahead ACL)** — 다른 organization user 노출 없음 | ✅ | FG 5-3 4중 방어 + 단위 9건 + 통합 TestClient 회귀 18건 (2026-05-14 작성, 2026-05-18 F-02 시정으로 외부 DB 의존 없이 in-process 통합 검증 — 401 / 400 / Trim / R-A4 query 주입 차단 / SQL injection 6 페이로드 / 응답 모델 누설 / trace metadata) |
+| 5 | AnnotationMark click → AnnotationsPanel 자동 펼침 + highlight + scroll | ✅ | (panel→panel) FG 5-4 setActiveTab("annotations") + (본문→panel) 2026-05-14 — EditPage onAnnotationClick 통합 + DetailPage NodeRenderer mark 인식 + delegated click + AnnotationGutter 좌측 도트. **2026-05-18 F-04 시정** — section 하위에서도 mark 가 끊기지 않도록 `contentSnapshot` 재귀 전달 + 실 렌더 회귀 3건 |
+| 6 | Gutter 노드별 주석 카운트 정확 | ✅ | 2026-05-14 본격 구현 — ResizeObserver + window scroll/resize debounce 50ms + `[data-node-id]` 좌표 추적. 카운트/해결됨 시각. F-04 시정 후 section 하위 paragraph 의 `[data-node-id]` 도 정상 부여 — gutter 좌표 추적 회귀 위험 해소 |
 | 7 | DocumentDetailPage 우측 사이드바 4 viewport UI 리뷰 통과 | 🟢 코드 PASS / 4 viewport drawer + UI 리뷰 ≥ 2회 잔여 | desktop / lg+ 320px sticky 우측 컬럼 + 그 외 본문 하단 stack fallback (2026-05-14). drawer / bottom-sheet / FAB / UI 디자인 리뷰는 별 라운드 |
 | 8 | Phase 1 NodeId 안정성 회귀 녹색 | ✅ | 회귀 영향 0 |
-| 9 | Phase 3 annotations 회귀 (anchoring 4 시나리오) 녹색 | ✅ | AnnotationsPanel props 확장 — 기존 동작 변경 0 |
+| 9 | Phase 3 annotations 회귀 (anchoring 4 시나리오) 녹색 | ✅ | AnnotationsPanel props 확장 — 기존 동작 변경 0. **2026-05-18 추가 확인** — F-05 시정 후에도 annotation list fetch / sanitize / saveDraft 흐름이 기존 동작과 동등 (loading 상태에서만 sanitize 건너뜀, 로드 완료 후 동일 동작) |
 
-**5.1 핵심 9 항목**: 2차 패치 후 5 ✅ + 4 🟢 (코드 차원 PASS, 환경 검증 잔여). 잔여 항목 (#1 backend round-trip / #3 jsdom / #7 4 viewport UI 리뷰) 는 운영자/jsdom 환경 의존.
+**5.1 핵심 9 항목**: 2026-05-18 시정 후 6 ✅ + 3 🟢 (코드 차원 PASS, 환경 검증 잔여). 잔여 항목 (#1 backend round-trip / #3 jsdom / #7 4 viewport UI 리뷰) 는 운영자/jsdom 환경 의존.
+
+> 참고: 2026-05-14 회고에서 #1/#4/#5/#6/#9 를 "✅ 운영자 실측 확인"으로 기록했으나, Codex 2차 검수에서 회귀 게이트 자체가 실행되지 않음(TS5107)/외부 DB 의존/fixture 결함이 드러나면서 그 주장은 재현 불가로 정정되었다. 본 표의 상태는 2026-05-18 시정·실측 후 다시 평가한 것이며, 같은 항목이라도 검증 근거가 달라졌다.
 
 ## 3. Phase 5 §5.2 회귀 게이트 — 매트릭스
 
@@ -170,6 +189,10 @@
 | 3 | **AnnotationsPanel 의 toast 호출 7건 tsc 오류** (Phase 3 잔재) — 본 FG 무관하지만 누적 잔여 | Phase 6 진입 전 별 cleanup task |
 | 4 | **Mark 통합 ADR 별 reviewer 합의 잔여** — 헌법 제27조 위반 위험 (Claude 1차 작성 / 합의자 동일) | Codex / 다른 주체 검토 의무. Phase 5 공식 종결 게이트의 일부 |
 | 5 | **NodeRenderer 가 mark 미인식** — read-only 상세 페이지에서 AnnotationMark 시각화 부재. 양방향 연동의 reverse 방향 (panel → 본문 highlight) 가 의미가 없음 | NodeRenderer mark 인식 또는 ProseMirror render 도입 — 별 라운드 |
+| 6 | **2026-05-14 패치의 "운영자 실측 확인" 이 자체 검증 부재로 잘못 기록** — 실제로 `npm run test` 는 TS5107 로 시작 전 종료, users_search 통합은 실 DB 접속 시도, FG 5-5 fixture 는 `KeyError` 로 실패. Codex 2차 검수 (2026-05-18) 가 발견 | "PASS 주장" 은 **운영자 셸에서 실제 명령을 실행한 출력**을 함께 기록 (수치 + 명령 + 출력 라인 일부 인용). 헌법 제27조 (No Self-Review) 정신 — 별 reviewer 의 재현 가능성을 보장. |
+| 7 | **helper-only 회귀가 실제 렌더 경로 결함을 가림** — `NodeRendererMarkFg52` 가 `indexInlineByNodeId` helper 만 검증해 section 재귀에서 `contentSnapshot={null}` 로 끊긴 사실을 catch 못함 (F-04) | helper 단위 회귀 + **실제 렌더 결과 HTML 검증** (renderToStaticMarkup) 2축 병행. 동일 패턴을 다른 mark-aware 컴포넌트에도 적용. |
+| 8 | **sanitize 가 loading state 와 empty state 를 구분하지 못함** — `validIds` 가 빈 Set 일 때 의미가 (a) 0건 (b) 로딩 중 두 가지로 갈리는데 sanitize 가 둘을 같게 취급해 정상 mark 까지 제거 가능 (F-05) | derived-state hook 이 fetch lifecycle 시그널 (`isLoaded`/`isSuccess`) 을 명시적으로 노출. 가드는 호출부 책임. |
+| 9 | **테스트 assertion 작성 오류** — `assert.equal(map.get("x") ?? [], undefined)` 는 항상 빈 배열 vs undefined 비교라 실패 (F-01 시정 후 처음 드러남) | review 시 nullish coalescing 안 의 placeholder 값과 expected 값이 다른 타입이면 의심 |
 
 ### 5.3 TRY — Phase 6 / 별 라운드에서 시도해 볼 것
 
@@ -232,6 +255,8 @@
 | 2026-04-27 | Phase 5 개발계획서 + task5-1 ~ task5-4 초안 |
 | 2026-05-10 | FG 2-3 (WikiLinkMark) 재진입 종결 — Phase 5 진입 게이트 보강 |
 | 2026-05-11 | FG 5-1 ~ FG 5-4 1차 종결 + 본 회고 |
+| 2026-05-14 | Codex 1차 검수 + 독립검수 P1+P2 통합 패치 (잘못된 "PASS 주장" 포함 — 2026-05-18 정정 대상) |
+| 2026-05-18 | Codex 2차 검수 (F-01 ~ F-05) 시정. frontend `npm run test` 640/0, backend pytest 본 영역 50/0 실측. §1.5 / §5.2 #6~#9 / 본 §8 갱신 |
 
 ---
 
@@ -249,3 +274,5 @@
 ---
 
 *작성: 2026-05-11 | S3 Phase 5 1라운드 종결 회고 — 샌드박스 PASS, UI 디자인 리뷰 + 4 viewport + 별 reviewer 합의 후 공식 종결*
+
+*2026-05-18 갱신: Codex 2차 검수 F-01 ~ F-05 시정 반영. frontend `npm run test` 640/0 + backend pytest 본 영역 50/0 실측 — `Phase5_Codex_2차_검수보고서_2026-05-18.md` §5 종결 조건 6 항목 중 1~5 완료 (#6 회고/종결보고서 정정 본 변경에서 완료).*

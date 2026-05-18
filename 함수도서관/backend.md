@@ -903,6 +903,7 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
   - `limit` 1~50 (default 20)
   - rate limit: `60/minute` (slowapi)
   - audit log: q **prefix 자체 미저장** — `q_length` + `result_count` 만 기록 (제24조 PII)
+  - **DB connection: `Depends(db_dependency)` (2026-05-18 F-02 시정)** — 다른 라우터 표준 패턴과 정합. 라우터가 모듈 수준 `get_db()` 를 직접 호출하지 않으므로 테스트에서 `app.dependency_overrides[db_dependency]` 로 in-process override 가 가능 (Codex 2차 검수 §F-02 시정).
 
 ### 8.3 응답 모델 — `app.schemas.user_search.UserSearchResponse` ✅
 
@@ -914,6 +915,12 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
 - Repository SQL: empty / JOIN 정합 / 파라미터 순서 / wildcard escape / 응답 키 정확성 (5)
 - Schema: 응답 모델이 email/role/status 미포함 / truncated flag (2)
 - R-A4 multi-org: 다른 org 사용자 미반환 / `viewer_user_id` keyword-only 강제 (2)
+
+### 8.4.1 통합 회귀 — `tests/integration/test_user_search_fg53_integration.py` (18건, 2026-05-14 작성, 2026-05-18 F-02 시정)
+
+- TestClient + `app.dependency_overrides[resolve_current_actor]` + `app.dependency_overrides[db_dependency]` 로 in-process 통합 검증 — 외부 PostgreSQL 의존 없음.
+- 401 (인증 미통과 / actor_id 부재) / 400 (빈 q / 너무 긴 q / limit 범위 밖) / Trim 공백 short-circuit / R-A4 query 주입 차단 / SQL injection 6 payload wildcard escape / 응답 모델 (email/role/status 누설 차단 + truncated flag) / trace metadata.
+- 2026-05-14 1차 작성 시 라우터가 모듈 수준 `get_db()` 를 호출했기 때문에 dependency override 가 안 잡혀 실제 DB 접속을 시도하던 결함이 Codex 2차 검수 (F-02) 로 보고됨. 라우터를 `Depends(db_dependency)` 로 변경하고 테스트가 `app.dependency_overrides` 로 conn stub 을 주입하도록 수정.
 
 ### 8.5 보안 정책 정합
 

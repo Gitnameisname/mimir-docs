@@ -650,3 +650,37 @@ ProseMirror schema 의 mark order 는 등록 순서 그대로 (ADR §c (i) 채�
 - UI 디자인 리뷰 ≥ 2회 (task5-4 §4 산출물 규약)
 - focus trap / collapsible drawer (mobile)
 - z-index 매트릭스 단일 정본 (`zIndex.ts`)
+
+
+## 11. save_draft sanitize 가드 — S3 Phase 5 FG 5-2 F-05 시정 (2026-05-18 도입)
+
+### 11.1 가드 헬퍼 — `frontend/src/features/editor/sanitizeForSave.ts`
+
+```ts
+export function sanitizeForSave(
+  doc: ProseMirrorDoc,
+  validAnnotationIds: Set<string>,
+  annotationsLoaded: boolean,
+): ProseMirrorDoc
+```
+
+- `annotationsLoaded === false` → 원본 doc 그대로 반환 (sanitize 건너뜀)
+- 그 외 → 기존 `cleanInvalidAnnotationMarks(doc, validIds)` 호출 (`@/features/editor/tiptap/extensions/AnnotationMark`)
+
+### 11.2 의무 호출부
+
+- `DocumentEditPage.tsx::saveMutation.mutationFn` — `validAnnotationIdsRef.current` + `annotationsLoadedRef.current` 두 ref 를 동시에 참조 (stale closure 차단)
+- 자동 저장(`scheduleAutoSave`) / 명시 저장(`handleSave`) 두 경로 모두 동일 mutation 을 통과하므로 단일 호출점
+
+### 11.3 hook 시그널 — `useDocumentAnnotations`
+
+- 신규 필드 `isLoaded: boolean` (react-query `query.isSuccess` 와 동일 시점) 노출
+- 호출부는 `validIds` 가 비어있을 때 그 의미가 (a) 실제 0건 (b) 로딩 중 두 가지로 갈리므로 `isLoaded` 와 함께 봐야 한다 — 모든 sanitize 가드의 1차 입력
+
+### 11.4 단위 회귀 — `frontend/tests/SanitizeForSaveFg52F05.test.tsx`
+
+5건 — 로드 미완료 보존 / 로드 완료 빈 set stale 제거 / validIds 포함 보존 / 다른 id 만 매칭 제거 / 다중 mark 일괄 보존
+
+### 11.5 배경
+
+Codex 2차 검수 `Phase5_Codex_2차_검수보고서_2026-05-18.md` F-05. 편집 페이지 진입 직후 annotation list 가 아직 로딩 중인 상태에서 사용자가 저장하거나 자동 저장 타이밍이 맞으면, 빈 validIds 기준으로 본문 내 모든 annotation mark 가 stale 로 판단되어 정상 mark 까지 제거되던 회귀를 차단.

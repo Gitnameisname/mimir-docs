@@ -250,19 +250,26 @@ S3 Phase 5 1라운드는 **코드 정합·단위 회귀·R-A4 4중 방어 패턴
 
 | §3 항목 | 상태 | 패치 위치 |
 |---------|----|---------|
-| §3.1 본문→Panel 양방향의 본문 측 누락 | ✅ | (a) `NodeRenderer.tsx` 가 `contentSnapshot` prop 으로 mark 인식 → DetailPage 본문에 `<span class="annotation-mark">` 렌더. (b) `DocumentDetailPage.tsx` 본문 wrapper 에 delegated click → `setSelectedAnnotationId`. (c) `DocumentEditPage.tsx` 에 `selectedAnnotationId` state + `onAnnotationClick` 연결 + AnnotationsPanel 우측 마운트. |
+| §3.1 본문→Panel 양방향의 본문 측 누락 | ✅ (2026-05-14 1차 + **2026-05-18 보강**) | (a) `NodeRenderer.tsx` 가 `contentSnapshot` prop 으로 mark 인식 → DetailPage 본문에 `<span class="annotation-mark">` 렌더. (b) `DocumentDetailPage.tsx` 본문 wrapper 에 delegated click → `setSelectedAnnotationId`. (c) `DocumentEditPage.tsx` 에 `selectedAnnotationId` state + `onAnnotationClick` 연결 + AnnotationsPanel 우측 마운트. **2026-05-18 Codex 2차 검수 F-04 시정**: section 재귀에서 `contentSnapshot={null}` 로 끊겨 section 하위 paragraph/heading 의 annotation/hashtag/wikilink mark 가 plain text 로 렌더되던 회귀 발견·수정. 자식 NodeRenderer 호출에 `contentSnapshot` 그대로 전달 + 실 렌더 결과 HTML 검증 회귀 3건 추가 (`NodeRendererMarkFg52.test.tsx` §D). |
 | §3.2 AnnotationGutter 좌측 도트 미구현 | ✅ | `AnnotationGutter.tsx` 재작성. ResizeObserver + window scroll/resize debounce 50ms + `[data-node-id]` 좌표 추적. DetailPage 본문 좌측 (`pl-7 relative` wrapper) 마운트. |
 | §3.3 MentionPopup 마운트 부재 | ✅ | `AnnotationsPanel.tsx` 의 신규 주석 textarea 에 통합. `MENTION_PREFIX_REGEX` cursor 직전 `@<prefix>` 감지 + 선택 시 `@display_name ` 치환 + cursor 이동. backend `extract_mentions` 가 영문 username 자동 매칭 → `mentioned_user_ids` 채움. 한국어는 FG 5-5 별 라운드 (MentionPopup.tsx docstring 명시). |
-| §3.4 save_draft sanitize 미호출 | ✅ | `DocumentEditPage.tsx` 의 `saveMutation.mutationFn` 가 `cleanInvalidAnnotationMarks(doc, validAnnotationIdsRef.current)` 호출. `validAnnotationIdsRef` 가 최신 set 유지 (stale closure 차단). |
-| §3.5 Mark 통합 ADR 별 reviewer 합의 | ⏳ | Codex 검수보고서 (2026-05-14) 가 1차 별 reviewer 역할 — `@최철균` P1 승인 게이트 |
+| §3.4 save_draft sanitize 미호출 | ✅ (2026-05-14 1차 + **2026-05-18 보강**) | `DocumentEditPage.tsx` 의 `saveMutation.mutationFn` 가 `cleanInvalidAnnotationMarks(doc, validAnnotationIdsRef.current)` 호출. `validAnnotationIdsRef` 가 최신 set 유지 (stale closure 차단). **2026-05-18 Codex 2차 검수 F-05 시정**: annotation list 로딩 중 빈 validIds 로 sanitize 가 정상 mark 까지 stale 로 판정해 삭제하는 회귀 발견·수정. `useDocumentAnnotations` 가 `isLoaded` 노출 + `sanitizeForSave` 가드 헬퍼 (`frontend/src/features/editor/sanitizeForSave.ts`) 도입. 단위 회귀 5건 추가 (`SanitizeForSaveFg52F05.test.tsx`). |
+| §3.5 Mark 통합 ADR 별 reviewer 합의 | ⏳ | Codex 1차 검수보고서 (2026-05-14) 가 1차 별 reviewer 역할. **2026-05-18 Codex 2차 검수**가 1차 패치 자체의 재현성 결함 5건을 추가 발견·시정함으로써 별 reviewer 역할이 한 번 더 작동. 본 회고/종결 게이트의 `@최철균` P1 승인은 여전히 잔여. |
 
-### 11.1 추가 회귀 (운영자 실측 ✅ 2026-05-14)
+### 11.1 추가 회귀 (운영자 실측 — 2026-05-14 1차 / 2026-05-18 재측정 갱신)
 
-| 회귀 파일 | 건수 | 영역 | 실측 |
+| 회귀 파일 | 건수 | 영역 | 실측 (2026-05-18) |
 |---------|-----|----|----|
-| `frontend/tests/NodeRendererMarkFg52.test.tsx` | 14 | indexInlineByNodeId / wrapWithMarks 우선순위 / robustness | ✅ PASS (`npm run test`) |
-| `frontend/tests/MentionDetectFg53.test.tsx` | 14 | MENTION_PREFIX_REGEX cursor 직전 감지 (boundary / 한국어 / 64자 / 이메일) | ✅ PASS (`npm run test`) |
-| `backend/tests/integration/test_user_search_fg53_integration.py` | 18 | TestClient + dependency_overrides — 401·400 (Mimir validation handler 매핑) / R-A4 query 주입 / SQL injection 6 payload / 응답 모델 / truncated / trace | ✅ PASS (fix 후) |
+| `frontend/tests/NodeRendererMarkFg52.test.tsx` | 14 + **3 (F-04)** | indexInlineByNodeId / wrapWithMarks 우선순위 / robustness / **section 재귀 실 렌더 회귀** | ✅ PASS (`npm run test` 640/0 — F-01 시정 후 처음 게이트 통과) |
+| `frontend/tests/MentionDetectFg53.test.tsx` | 14 | MENTION_PREFIX_REGEX cursor 직전 감지 (boundary / 한국어 / 64자 / 이메일) | ✅ PASS |
+| `frontend/tests/SanitizeForSaveFg52F05.test.tsx` (신규) | **5 (F-05)** | annotation loading 가드 — 로드 미완료/완료 × 빈/매칭 validIds 매트릭스 | ✅ PASS |
+| `backend/tests/integration/test_user_search_fg53_integration.py` | 18 | TestClient + dependency_overrides — 401·400 (Mimir validation handler 매핑) / R-A4 query 주입 / SQL injection 6 payload / 응답 모델 / truncated / trace | ✅ PASS — **F-02 시정으로 외부 DB 의존 없이 in-process 통합 검증** (`db_dependency` override) |
+| `backend/tests/unit/test_annotations_mentions_fg55.py` | 23 | FG 5-5 한국어 멘션 + display_name fallback | ✅ PASS — **F-03 시정으로 stub row `role_name` 컬럼 정합** |
+
+> 2026-05-14 의 "운영자 실측 ✅" 는 Codex 2차 검수 (2026-05-18) 가 실제 환경에서
+> 재현 실패 (frontend test gate 가 TS5107 로 종료, backend 통합이 실 DB 접속,
+> FG 5-5 fixture `KeyError`) 를 보고함에 따라 정정되었다. 본 절의 ✅ 는
+> F-01~F-05 시정 후 같은 환경에서 다시 측정한 결과다.
 
 **Fix 적용 사항** (운영자 실행 중 발견):
 - `AuthMethod.JWT` 부재 → `AuthMethod.BEARER` 사용 (실제 enum 값: SESSION / BEARER / API_KEY / INTERNAL_SERVICE)
