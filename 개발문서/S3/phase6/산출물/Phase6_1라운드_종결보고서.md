@@ -44,15 +44,19 @@
 | `backend/app/scheduler.py` | retention thread 통합 |
 | `backend/app/db/connection.py` | archive DDL 2개 bootstrap |
 
-### 2.3 신설 회귀 (39건)
+### 2.3 신설 회귀 (42건 — Codex 2차 시정 후)
 
 | 파일 | 회귀 수 |
 |---|---|
-| `tests/unit/test_rate_limit_fg61.py` | 9 |
-| `tests/unit/test_retention_job_fg62.py` | 9 |
-| `tests/unit/test_content_sanitizer_fg63.py` | 13 |
+| `tests/unit/test_rate_limit_fg61.py` | 6 |
+| `tests/unit/test_retention_job_fg62.py` | 12 (P1-1 archive-first 3건 추가) |
+| `tests/unit/test_content_sanitizer_fg63.py` | 14 |
 | `tests/unit/test_admin_org_guard_fg64.py` | 8 |
-| **합계** | **39** |
+| `tests/unit/test_admin_org_isolation_routes_fg64.py` | 2 (P2-1 신규) |
+| **합계** | **42** |
+
+(이전 종결보고서의 39건 주장은 Codex 2차 P2-2 가 실제 37건으로 정정. P1-1/P2-1
+시정으로 5건 추가 → 합계 42건.)
 
 ---
 
@@ -73,7 +77,7 @@
 
 | 기준 | 결과 |
 |---|---|
-| pytest unit 베이스라인 유지 | ✅ 2739 passed, 13 skipped (--ignore=fg33) |
+| pytest unit 베이스라인 유지 | ✅ 2744 passed, 13 skipped (--ignore=fg33, Codex 2차 시정 후 신규 5건 포함) |
 | pytest security 유지 | ✅ 250 passed, 1 skipped |
 | 신규 cron dry-run 가용 | ✅ `RETENTION_DRY_RUN=1` |
 | tsc 0 error | (UI 변경 없음 — 본 Phase) |
@@ -100,12 +104,13 @@
 
 | # | 항목 | 사유 |
 |---|---|---|
-| O1 | per-user rate-limit keying | Phase 7 (Valkey + cluster-wide) |
+| O1 | per-user rate-limit keying | Phase 7 (Valkey + cluster-wide). 현재 slowapi `_get_client_ip` 기반 per-IP — Codex 2차 §5 추가 관찰 반영, Phase 계획서의 "per-user / per-IP" 표현은 per-IP 통일을 의미. |
 | O2 | archive 자체의 sub-retention | 별 라운드 |
 | O3 | annotation 외 텍스트 필드 sanitize | 별 라운드 |
 | O4 | admin 14 외 endpoint 격리 | 별 라운드 (`FG6-4_Admin엔드포인트_점검표.md` §3) |
 | O5 | SUPER_ADMIN 횡단 빈도 알람 | Phase 7 (observability) |
 | O6 | 다중 org admin 의 list UX | 별 ADR |
+| O7 | `audit_emitter.emit` 실패 시 P1 위반 처리 여부 | 운영자 결정 — Codex 2차 §5 추가 관찰. 현재 warning 후 통과 (가용성 우선). 정책 강화 검토는 별 라운드 |
 
 ## 8. 1라운드 종결 정의
 
@@ -125,3 +130,4 @@
 | 일자 | 변경 | 작성자 |
 |---|---|---|
 | 2026-05-18 | 4 FG 일괄 1차 종결 (Claude 단독 처리 — single-agent exception) | Claude |
+| 2026-05-18 | Codex 2차 검수 P1-1 / P1-2 / P2-1 / P2-2 시정 — archive-first 무결성 강화 + recursive CTE + verify rollback + 함수도서관 갱신 + route-level 회귀 + 카운트 정정 (총 42건) | Claude |

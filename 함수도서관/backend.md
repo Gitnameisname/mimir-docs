@@ -929,3 +929,152 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
 - **Rate limit**: 60/min slowapi
 - **응답 모델 강제**: Pydantic `UserSearchItem` 이 email/role/status 필드 자체 미정의 → 누설 가능성 0
 - **timing attack**: SQL `JOIN ... LIMIT` 가 인덱스 활용 (idx_user_org_roles_user / idx_users_email 등). 같은 query 길이에서 응답 시간 차이 미미 — 별 라운드 정량 측정 권장.
+
+---
+
+## 9. 도메인 함수 — S3 Phase 6 (2026-05-18 도입)
+
+운영 안전 라운드. 4 FG 일괄: rate-limit / retention / sanitize / admin org 격리.
+상세는 `docs/개발문서/S3/phase6/`. P1 변경 (Meta-1) — @최철균 승인.
+
+### 9.1 `app.utils.content_sanitizer` ✅ (FG 6-3)
+
+- `reject_dangerous_chars(text: str | None, *, field_label: str = "content", max_length: int = MAX_CONTENT_LENGTH) -> str` ✅
+  - status: ✅ Existing
+  - kind: **@policy** — write 시점 입력 검증 게이트.
+  - purpose: 사용자 텍스트 입력의 **저수준 바이트 위험** (null byte / BOM / RLO override / surrogate / 길이 초과) 을 reject. R-O3 정책의 write 경로.
+  - effects: none (순수 검증). raw 본문은 변형하지 않고 그대로 반환.
+  - errors: `ApiValidationError` — 위험 문자 검출 또는 길이 초과. `field_label` 이 메시지에 삽입됨.
+  - source: `backend/app/utils/content_sanitizer.py`
+  - tests: `backend/tests/unit/test_content_sanitizer_fg63.py` (14건)
+  - used by: `app.services.annotations_service._validate_content` (annotation content)
+  - notes:
+    - reject 대상 codepoint: `\x00` / `﻿` BOM / `‮` RLO / `‭` LRO / `‎` LRM / `‏` RLM / surrogate (D800~DFFF).
+    - 한글 NFC/NFD / 이모지 / tab/newline/CR 전부 통과.
+    - **R-O3 "write 시 raw 보존"** — sanitize 가 아닌 reject (사용자 의도 손실 방지).
+
+- `sanitize_for_response(text: str | None) -> str` ✅
+  - status: ✅ Existing
+  - kind: **@effectful** — 응답 직렬화 변형.
+  - purpose: ANSI escape sequence + (tab/newline/CR 제외) C0/C1 control char 제거. DB 원본은 raw 보존, **응답 직렬화 단계** 에서만 정규화.
+  - effects: 응답 본문 문자열 변형 (DB 무관).
+  - errors: none (입력이 `None` 이면 `""`, 비문자열은 `str(text)` 로 강제 변환).
+  - source: `backend/app/utils/content_sanitizer.py`
+  - tests: `backend/tests/unit/test_content_sanitizer_fg63.py` (14건)
+  - used by:
+    - `app.api.v1.annotations._to_response` — annotation content 응답 정규화.
+    - `app.services.notifications_service.enqueue_mention` — mention `snippet` payload 저장 정합 (응답이 dict-passthrough 이므로 enqueue 시점에 적용).
+  - notes:
+    - 정규식: CSI `\x1b\[...` / OSC `\x1b\]...(BEL|ESC\)` / 기타 Fp/Fe `\x1b[@-_]` / control `[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]`.
+    - **idempotent** — 두 번 적용해도 결과 동일. Phase 4 prompt-injection layer 와 별 레이어 (R-07).
+    - html_sanitizer 와 별 레이어 — XSS 는 html_sanitizer 가 담당.
+
+- `MAX_CONTENT_LENGTH: int = 10_000`
+  - DB `annotations.content_length` CHECK (1~10000) 과 동치 (단일 진실점).
+
+### 9.2 `app.utils.admin_org_guard` ✅ (FG 6-4)
+
+- `is_super_admin(actor: ActorContext | None) -> bool` ✅
+  - status: ✅ Existing
+  - kind: **@policy** — role 검사 helper.
+  - purpose: actor 가 인증된 `SUPER_ADMIN` 인지 확인. cross-org 횡단 허용 여부의 단일 진입점.
+  - effects: none
+  - errors: none
+  - source: `backend/app/utils/admin_org_guard.py`
+  - tests: `backend/tests/unit/test_admin_org_guard_fg64.py` (8건)
+
+- `actor_org_ids(conn, actor: ActorContext | None, *, role_filter: frozenset[str] | None = None) -> frozenset[str]` ✅
+  - status: ✅ Existing
+  - kind: **@io** — `user_org_roles` SELECT.
+  - purpose: actor 가 (선택 role 로) 속한 organization id 집합 반환. `ensure_actor_can_access_org` 의 통과 판정에 사용 + list endpoint 의 auto-scope 기준.
+  - effects: DB SELECT 1회 (`user_org_roles`).
+  - errors: none — 조회 실패 시 빈 `frozenset()` (fail-closed; warning 로그).
+  - source: `backend/app/utils/admin_org_guard.py`
+  - tests: 같음.
+  - notes: anonymous / actor_id 부재 시 즉시 빈 set.
+
+- `ensure_actor_can_access_org(conn, actor, *, target_org_id: str | None, action: str, resource_type: str, resource_id: str | None = None) -> None` ✅
+  - status: ✅ Existing
+  - kind: **@policy + @effectful** — 거부 시 raise, SUPER_ADMIN 통과 시 audit emit.
+  - purpose: admin endpoint 의 organization 격리 guard. R-O4 의 단일 진입점.
+  - effects:
+    - SUPER_ADMIN 횡단 시 `audit_emitter.emit(event_type="admin.cross_org_access", ...)` 호출 (실패는 warning 후 통과 — open question 메모 9.5 참고).
+    - 그 외 통과 케이스에는 effect 없음.
+  - errors:
+    - `ApiPermissionDeniedError("관리자 권한이 필요합니다.")` — actor None / 미인증.
+    - `ApiPermissionDeniedError("자원의 조직 정보를 확인할 수 없어 접근이 거부되었습니다.")` — non-SUPER_ADMIN + target_org_id is None.
+    - `ApiPermissionDeniedError("다른 조직의 자원은 변경할 수 없습니다.")` — ORG_ADMIN 이 다른 조직 자원 접근.
+  - source: `backend/app/utils/admin_org_guard.py`
+  - tests: 같음 + `backend/tests/unit/test_admin_org_isolation_routes_fg64.py` (route-level 회귀, P2-1 시정).
+  - used by (14 endpoint, Phase 6 FG 6-4):
+    - `app.api.v1.scope_profiles.{create|list|get|update|delete}_scope_profile`
+    - `app.api.v1.scope_profiles.{create|list|get|update|delete}_agent`
+    - `app.api.v1.admin.{assign|remove}_user_org_role`
+    - `app.api.v1.admin.{update|delete}_organization`
+  - notes:
+    - **fail-closed**: target_org_id 가 None 인데 non-SUPER_ADMIN 이면 거부.
+    - list endpoint 패턴: organization_id 미지정 시 non-SUPER_ADMIN 은 본인 첫 org 으로 강제 (다중 org admin 은 별 ADR).
+
+### 9.3 `app.services.retention_job` ✅ (FG 6-2)
+
+- `RetentionJob(conn, *, viewed_days=None, resolved_annotation_days=None, batch_limit=None, dry_run=None)` ✅
+  - status: ✅ Existing
+  - kind: **@effectful** — DB INSERT INTO archive + DELETE source.
+  - purpose: archive-first 데이터 폐기 배치. `audit_events.document.viewed` 7일 / `annotations.status='resolved'` 90일 이상 row 를 별 archive 테이블 (`audit_events_archive` / `annotations_archive`) 로 이동.
+  - effects:
+    - 단일 트랜잭션 `WITH inserted ... INSERT INTO ... ON CONFLICT DO NOTHING RETURNING id` + `DELETE FROM ... WHERE id IN (deletable)` (deletable = inserted ∪ already_archived).
+    - `_run_annotations_retention()` 은 **archive 무결성 verify** 추가 — DELETE 한 모든 id 가 archive 에 존재하지 않으면 `rollback()` + `RuntimeError` (data-loss 차단).
+    - 환경변수 (`RETENTION_DOCUMENT_VIEWED_DAYS=7` / `RETENTION_RESOLVED_ANNOTATION_DAYS=90` / `RETENTION_BATCH_LIMIT=500` / `RETENTION_DRY_RUN` / `RETENTION_CRON_HOUR=2` / `RETENTION_BATCH_ENABLED=true`).
+  - errors:
+    - `RuntimeError("annotation retention archive-first violation: ...")` — verify gate 실패. rollback 선행.
+    - 그 외 SQL/IO 오류는 `errors[]` 에 수집되어 결과 dict 의 `status="partial"` 로 노출 (다른 step 진행 차단 안 함).
+  - source: `backend/app/services/retention_job.py`
+  - tests: `backend/tests/unit/test_retention_job_fg62.py` (12건; dry-run / archive-first / nested CTE / verify rollback / env override / cron schedule).
+  - notes:
+    - **archive-first 무결성 보장 (Codex 2차 P1-1 시정, 2026-05-18)**:
+      - DELETE 기준이 archive 성공 id 집합 — 이전엔 expired 후보로 잘못 잡혀 있었음.
+      - annotation cascade 답글은 `WITH RECURSIVE descendants` 로 임의 depth 까지 수집 — ON DELETE CASCADE 가 archive 안 거치고 reply 를 삭제하는 경로 차단.
+      - 별도 verify SELECT (annotations_archive WHERE id = ANY(deleted)) 가 일치 하지 않으면 rollback.
+    - dry-run 모드 가용 (`RETENTION_DRY_RUN=1`) — 첫 배포 시 1~2일 권장.
+    - 운영 마이그레이션 가이드: `docs/개발문서/S3/phase6/산출물/FG6-2_마이그레이션_가이드.md`.
+
+- `run_retention_job(*, request_id: str | None = None) -> dict` ✅
+  - status: ✅ Existing
+  - kind: **@effectful** — `app.db.get_db()` connection 으로 `RetentionJob` 실행.
+  - purpose: `app.scheduler.BatchScheduler` 가 cron 시각에 호출하는 모듈 진입점.
+  - effects: 위 `RetentionJob` 와 동일.
+  - errors: 어떤 예외도 외부로 raise 하지 않음 — error 결과 dict 로 변환 (scheduler thread 보호).
+  - source: 같음.
+  - tests: 같음.
+
+### 9.4 Phase 6 신규 routing — `@limiter.limit` (FG 6-1)
+
+annotations / contributors / notifications 라우터의 11 endpoint 에 `@limiter.limit` dependency 일괄 적용. 새 utility 함수는 없으며 기존 `app.api.rate_limit.limiter` 패턴 (citations / mcp / search / rag / users_search) 을 그대로 따른다.
+
+limit 상수 (`backend/app/api/v1/<router>.py` 의 모듈 수준):
+- `_ANNOTATION_WRITE_LIMIT = "30/minute"` — create/update/resolve/reopen/delete
+- `_ANNOTATION_READ_LIMIT  = "60/minute"` — list/get
+- `_CONTRIBUTORS_LIMIT     = "60/minute"`
+- `_NOTIFICATIONS_POLL_LIMIT  = "120/minute"` — list / unread-count
+- `_NOTIFICATIONS_WRITE_LIMIT = "60/minute"` — mark-read
+
+keying 은 기존 slowapi client IP 기반. cluster-wide / per-actor keying 은 Phase 7 (Valkey 정합) 와 함께 별 라운드.
+
+### 9.5 운영 정책 — open question
+
+`ensure_actor_can_access_org` 의 SUPER_ADMIN cross-org audit emit 실패 처리:
+- 현재: warning 로그 후 통과 (가용성 우선).
+- 개선 검토 (보안 강화 시): emit 실패를 P1 위반으로 보고 거부.
+- 결정 책임: 운영자 — Phase 6 종결 보고서 §7 R3 (Phase 7 observability) 와 같이 검토.
+
+### 9.6 단위 회귀 — Phase 6 신규 (총 42건, 2026-05-18 재검수 후)
+
+| 파일 | 회귀 수 | 책임 |
+|---|---|---|
+| `tests/unit/test_rate_limit_fg61.py` | 6 | decorator 적용 + limit 상수 |
+| `tests/unit/test_retention_job_fg62.py` | 12 | archive-first / recursive CTE / verify rollback / env / cron |
+| `tests/unit/test_content_sanitizer_fg63.py` | 14 | write reject + read sanitize |
+| `tests/unit/test_admin_org_guard_fg64.py` | 8 | guard 분기 |
+| `tests/unit/test_admin_org_isolation_routes_fg64.py` | 2 | route-level org 격리 (Codex P2-1 시정) |
+
+**합계 42건** — 산출물 종결보고서와 일치 (Codex P2-2 시정 반영).
