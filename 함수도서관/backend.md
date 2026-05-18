@@ -1067,14 +1067,14 @@ keying 은 기존 slowapi client IP 기반. cluster-wide / per-actor keying 은 
 - 개선 검토 (보안 강화 시): emit 실패를 P1 위반으로 보고 거부.
 - 결정 책임: 운영자 — Phase 6 종결 보고서 §7 R3 (Phase 7 observability) 와 같이 검토.
 
-### 9.6 단위 회귀 — Phase 6 신규 (총 42건, 2026-05-18 재검수 후)
+### 9.6 단위 회귀 — Phase 6 신규 (총 46건, 2026-05-18 Codex 3차 보강 후)
 
 | 파일 | 회귀 수 | 책임 |
 |---|---|---|
 | `tests/unit/test_rate_limit_fg61.py` | 6 | decorator 적용 + limit 상수 |
-| `tests/unit/test_retention_job_fg62.py` | 12 | archive-first / recursive CTE / verify rollback / env / cron |
+| `tests/unit/test_retention_job_fg62.py` | 13 | archive-first / recursive CTE / verify rollback (annotation + audit 대칭) / env / cron |
 | `tests/unit/test_content_sanitizer_fg63.py` | 14 | write reject + read sanitize |
 | `tests/unit/test_admin_org_guard_fg64.py` | 8 | guard 분기 |
-| `tests/unit/test_admin_org_isolation_routes_fg64.py` | 2 | route-level org 격리 (Codex P2-1 시정) |
+| `tests/unit/test_admin_org_isolation_routes_fg64.py` | 5 | route-level org 격리 — 4 endpoint group 전수 cross-org reject + SUPER_ADMIN cross-org audit emit (Codex 2차 P2-1 + 3차 잔존 보강) |
 
-**합계 42건** — 산출물 종결보고서와 일치 (Codex P2-2 시정 반영).
+**합계 46건** — 산출물 종결보고서와 일치 (Codex P2-2 / P3-1 시정 반영). unit 베이스라인 2748 passed.

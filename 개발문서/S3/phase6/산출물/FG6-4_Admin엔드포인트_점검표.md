@@ -26,13 +26,22 @@
 | 13 | `/admin/organizations/{org_id}` | PATCH | `update_organization` | path org_id |
 | 14 | `/admin/organizations/{org_id}` | DELETE | `delete_organization` | path org_id |
 
-각 endpoint 의 4 시나리오 회귀 결과:
-- ORG_ADMIN 본인 조직 — 200/201/204 (정상)
-- ORG_ADMIN 다른 조직 — 403 (`ApiPermissionDeniedError`, **단위 시뮬레이션**)
-- SUPER_ADMIN 본인 조직 — 200 + emit
-- SUPER_ADMIN 횡단 — 200 + `admin.cross_org_access` emit
+**검증 방식** (Codex 3차 P2-1 잔존 시정 — 표현 정확화):
 
-`tests/unit/test_admin_org_guard_fg64.py` G2~G6 가 1 → 4 분기를 일괄 검증.
+본 라운드는 **3축 결합 회귀** 로 검증한다 — endpoint × 시나리오 행렬 전수가 아님.
+
+| 축 | 회귀 | 대상 |
+|---|---|---|
+| (a) **helper 단위 분기** | `tests/unit/test_admin_org_guard_fg64.py` (8건, G1~G8) | `ensure_actor_can_access_org` 의 4 분기 (SUPER_ADMIN 횡단 + audit emit / ORG_ADMIN 본인 조직 / ORG_ADMIN 다른 조직 reject / target_org_id None reject) |
+| (b) **대표 route-level (ASGI stack)** | `tests/unit/test_admin_org_isolation_routes_fg64.py` (5건) | 4 endpoint group 각각의 cross-org reject 1건 (agent / scope-profile / user-org-role / organization) + SUPER_ADMIN cross-org audit emit 1건 (agent) |
+| (c) **코드 점검표** (본 문서) | (수동) | 14 endpoint 각각에 `ensure_actor_can_access_org` 호출 또는 `is_super_admin`/`actor_org_ids` 호출이 wired 됨을 코드 review 로 확인 |
+
+각 축의 의미:
+- (a) 가 guard 의 **분기 정확성** 을 보장.
+- (b) 가 guard 가 ASGI stack 위에서 **실제 wired** 임을 보장 (4 endpoint group 모두 대표 1건 포함).
+- (c) 가 14 endpoint 중 어느 하나라도 guard 호출이 누락되지 않았음을 review-time 에 확인.
+
+**14 endpoint × 4 시나리오 전수 route-level 회귀**는 본 라운드 범위 밖 — §3 의 "다음 라운드 점검 권고" 로 이관 (별 라운드).
 
 ---
 
