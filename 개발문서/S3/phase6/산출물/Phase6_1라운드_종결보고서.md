@@ -1,7 +1,8 @@
 # S3 Phase 6 1라운드 종결보고서 — 운영 안전
 
 **작성일**: 2026-05-18
-**Phase 상태**: 1라운드 1차 종결 (Codex 2차 검수 + @최철균 P1 승인 대기)
+**Phase 상태**: ✅ **공식 종결** (Codex 4차 All Green + @최철균 P1 승인, 2026-05-18)
+**공식 종결 문서**: [Phase6_공식종결보고서.md](Phase6_공식종결보고서.md)
 **Handoff Level**: `extended` (Rate Limit + DB 폐기 + 보안 P0)
 
 ---
@@ -103,15 +104,18 @@
 
 ## 7. 별 라운드 권고 (본 Phase 1라운드 명시적 제외)
 
-| # | 항목 | 사유 |
+> **정본**: [docs/개발문서/S3/이월.md](../../이월.md) — Phase 6 이월 등록부.
+> 공식 종결 보고서 [Phase6_공식종결보고서.md](Phase6_공식종결보고서.md) §7 도 동일 표 참조.
+
+| # | 항목 | 분류 |
 |---|---|---|
-| O1 | per-user rate-limit keying | Phase 7 (Valkey + cluster-wide). 현재 slowapi `_get_client_ip` 기반 per-IP — Codex 2차 §5 추가 관찰 반영, Phase 계획서의 "per-user / per-IP" 표현은 per-IP 통일을 의미. |
-| O2 | archive 자체의 sub-retention | 별 라운드 |
+| O1 | per-user rate-limit keying | **Phase 7 흡수** (FG 7-4) — 현재 slowapi per-IP. Codex 2차 §5 관찰. |
+| O2 | archive 자체의 sub-retention | 별 라운드 (cold storage backend 결정 선행) |
 | O3 | annotation 외 텍스트 필드 sanitize | 별 라운드 |
-| O4 | admin 14 외 endpoint 격리 | 별 라운드 (`FG6-4_Admin엔드포인트_점검표.md` §3) |
-| O5 | SUPER_ADMIN 횡단 빈도 알람 | Phase 7 (observability) |
+| O4 | admin 14 endpoint × 4 시나리오 전수 route-level | 별 라운드 (운영자 요구 시) — `FG6-4_Admin엔드포인트_점검표.md` §3 |
+| O5 | SUPER_ADMIN 횡단 빈도 알람 | **Phase 7 흡수** (FG 7-6 observability) |
 | O6 | 다중 org admin 의 list UX | 별 ADR |
-| O7 | `audit_emitter.emit` 실패 시 P1 위반 처리 여부 | 운영자 결정 — Codex 2차 §5 추가 관찰. 현재 warning 후 통과 (가용성 우선). 정책 강화 검토는 별 라운드 |
+| O7 | `audit_emitter.emit` 실패 시 P1 정책 | 운영자 결정 — 현재 warning 후 통과 (가용성 우선) |
 
 ## 8. 1라운드 종결 정의
 

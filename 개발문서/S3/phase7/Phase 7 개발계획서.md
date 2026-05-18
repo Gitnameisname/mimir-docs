@@ -72,10 +72,18 @@ S3 1라운드의 마지막 잔존 — 다중 워커 환경의 일관성 문제 �
 
 | FG | 제목 | 진행 조건 |
 |----|------|---------|
-| **7-4** | Cluster-wide rate-limit | 다중 워커 환경에서 rate-limit 우회가 운영 영향 (실측). 영향 작으면 보류 |
+| **7-4** | Cluster-wide rate-limit + **per-user keying** | 다중 워커 환경에서 rate-limit 우회가 운영 영향 (실측). 영향 작으면 보류. **Phase 6 이월 O1 흡수**: 현재 slowapi `_get_client_ip` per-IP keying 을 per-user/per-actor keying 으로 확장 (NAT/공유 IP false-positive 차단). |
 | **7-5** | Retention cron lock + notification dedup | (a) 다중 워커가 같은 cron 동시 실행 방지 (Valkey SETNX lock). (b) annotation 멘션 폭주 시 cluster-wide dedup |
+| **7-6** | Observability — SUPER_ADMIN 횡단 알람 (선택) | **Phase 6 이월 O5 흡수**: `audit_events.event_type='admin.cross_org_access'` 의 빈도 알람. 같은 SUPER_ADMIN 이 일 평균 ×10 초과 또는 절대 임계 (예: 1일 10회) 초과 시 운영자 알람. `alert_rules` 테이블 + 별 dashboard 활용. |
 
-> ⚠️ FG 7-4 / 7-5 는 본 Phase 1라운드 게이트의 일부가 **아니다**.
+> ⚠️ FG 7-4 / 7-5 / 7-6 은 본 Phase 1라운드 게이트의 일부가 **아니다**.
+> 진행 결정은 Phase 7 1라운드 (7-1~7-3) 완료 후 운영자 + @최철균 합의.
+
+### 2.3 이월 등록부 (`docs/개발문서/S3/이월.md`)
+
+Phase 6 이월 7항 (O1~O7) 의 위치 / 우선순위 / 의존 / 출처는 `docs/개발문서/S3/이월.md`
+가 정본. Phase 7 에서 흡수 검토하는 항목은 위 §2.2 의 FG 7-4 / 7-6 (O1 / O5).
+나머지 O2~O4, O6~O7 은 별 라운드 / 별 ADR / 운영자 결정 대상.
 
 ---
 
@@ -112,14 +120,15 @@ VALKEY_FAIL_CLOSED_FEATURES=scope_policy
 
 ## 4. 산출물 규약
 
-| 산출물 | FG 7-1 | FG 7-2 | FG 7-3 | FG 7-4 | FG 7-5 |
-|--------|--------|--------|--------|--------|--------|
-| 작업지시서 (`task7-N.md`) | ✅ | ✅ | ✅ | (조건부) | (조건부) |
-| 인프라 가이드 (운영자 대상) | ✅ | — | — | — | — |
-| 검수보고서 (R-I1~I4 준수 확인) | ✅ | ✅ | ✅ | (조건부) | (조건부) |
-| 보안취약점검사보고서 (pub/sub 권한) | — | ✅ | ✅ | (조건부) | (조건부) |
-| 운영자 합의 기록 | ✅ | — | — | — | — |
-| 폐쇄망 회귀 결과 | ✅ | ✅ | ✅ | — | — |
+| 산출물 | FG 7-1 | FG 7-2 | FG 7-3 | FG 7-4 | FG 7-5 | FG 7-6 |
+|--------|--------|--------|--------|--------|--------|--------|
+| 작업지시서 (`task7-N.md`) | ✅ | ✅ | ✅ | (조건부) | (조건부) | (조건부) |
+| 인프라 가이드 (운영자 대상) | ✅ | — | — | — | — | — |
+| 검수보고서 (R-I1~I4 준수 확인) | ✅ | ✅ | ✅ | (조건부) | (조건부) | (조건부) |
+| 보안취약점검사보고서 (pub/sub 권한) | — | ✅ | ✅ | (조건부) | (조건부) | (조건부) |
+| 운영자 합의 기록 | ✅ | — | — | — | — | ✅ (알람 임계) |
+| 폐쇄망 회귀 결과 | ✅ | ✅ | ✅ | — | — | — |
+| Alert 임계 실측 (FG 7-6) | — | — | — | — | — | ✅ |
 
 ---
 
@@ -165,8 +174,23 @@ S3 2라운드 또는 S4 진입 결정은 별 회고에서.
 
 - Valkey 클러스터 sentinel vs cluster mode → FG 7-1 운영자 합의
 - pub/sub 채널의 메시지 형식 (JSON vs MessagePack) → FG 7-1 결정
-- cluster-wide rate-limit 도입 여부 → FG 7-4 (실측 후)
+- cluster-wide rate-limit + **per-user keying (O1)** 도입 여부 → FG 7-4 (실측 후)
 - retention cron lock 도입 여부 → FG 7-5 (다중 워커 영향 측정 후)
+- **SUPER_ADMIN 횡단 알람 (O5)** 임계 / 채널 → FG 7-6 (alert_rules 도입 후 실측)
+
+### 6.3 Phase 6 이월 항목 (별 라운드 / 별 ADR / 운영자 결정)
+
+본 Phase 가 흡수 검토하지 않는 Phase 6 이월 항목 — `docs/개발문서/S3/이월.md` 정본.
+
+| 코드 | 항목 | 분류 |
+|---|---|---|
+| O2 | archive 자체 sub-retention (cold storage / PURGE) | 별 라운드 (cold storage 결정 선행) |
+| O3 | annotation 외 텍스트 필드 sanitize 일괄 | 별 라운드 |
+| O4 | admin 14 endpoint × 4 시나리오 전수 route-level | 별 라운드 (운영자 요구 시) |
+| O6 | 다중 org admin 의 list UX | 별 ADR |
+| O7 | `audit_emitter.emit` 실패 시 P1 정책 | 운영자 결정 |
+
+위 항목은 Phase 7 1라운드 진행과 독립이다.
 
 ---
 
@@ -200,6 +224,8 @@ S3 2라운드 또는 S4 진입 결정은 별 회고에서.
 - `docs/개발문서/S3/phase3/산출물/FG3-2_검수보고서.md` §3 (scope_profile_policy 다중 워커 한계)
 - `docs/개발문서/S3/phase3/산출물/FG3-3_검수보고서.md` §3 (notification rate-limit cluster-wide 잔존)
 - `docs/개발문서/S3/phase6/Phase 6 개발계획서.md` (rate-limit / retention cron — Phase 6 의 단일 워커 구조 위에 cluster 화)
+- `docs/개발문서/S3/phase6/산출물/Phase6_공식종결보고서.md` §7 — Phase 6 이월 7항 (O1~O7)
+- `docs/개발문서/S3/이월.md` — Phase 6 이월 등록부 (O1/O5 가 Phase 7 흡수 검토 대상)
 - `docs/규칙/CONSTITUTION.md` 제16조 (Trust Level), 제24조 (Long-term Memory) — Valkey 가 long-term memory 가 아님 명시 의무
 
 ---
@@ -209,6 +235,7 @@ S3 2라운드 또는 S4 진입 결정은 별 회고에서.
 | 일자 | 변경 | 작성자 |
 |------|------|-------|
 | 2026-04-27 | 초안 — Phase 4 (MCP) 신설 후 재정렬. 기존 "Phase 6 (Valkey)" 안을 Phase 7 으로 이동. S3 1라운드 종결 Phase | Claude |
+| 2026-05-18 | Phase 6 공식 종결 후 이월 반영 — FG 7-4 에 O1 (per-user keying) 흡수, FG 7-6 (SUPER_ADMIN 알람, O5) 신설, §6.3 Phase 6 이월 표 추가, 참조에 이월.md 링크 추가 | Claude |
 
 ---
 
