@@ -189,18 +189,19 @@
   - effects: in-process LRU 캐시 갱신 (외부 I/O 없음)
   - errors: none — 잘못된 환경변수는 default 로 fallback
   - source: `backend/app/audit/viewed_throttle.py`
-  - tests: `backend/tests/unit/audit/test_viewed_throttle.py` (16 case — 첫 호출 / 윈도우 안 dedup / 다른 actor·document / anonymous / 빈 document_id / 윈도우 만료 / 윈도우 0 disable / 잘못된 env / 음수 / LRU eviction / max_entries env / thread-safe)
+  - tests: `backend/tests/unit/audit/test_viewed_throttle.py` (16 case 기존) + `test_viewed_throttle_cluster.py` (14 case — FG 7-2 cluster-wide)
   - 사용지 (call sites):
     - `backend/app/api/v1/documents.py` `get_document` — `GET /api/v1/documents/{id}` 진입 시 호출 후 True 면 `audit_emitter.emit_for_actor(event_type="document.viewed", ...)`
   - configuration:
     - `AUDIT_VIEWED_DEDUP_WINDOW_SEC` (기본 300, 0 = dedup off)
     - `AUDIT_VIEWED_DEDUP_MAX_ENTRIES` (기본 5000, LRU 상한)
   - notes:
-    - **다중 워커 미지원**: 워커별 독립 LRU. Strict cluster-wide dedup 은 별 라운드 (Valkey 도입 후).
+    - **Cluster-wide (S3 Phase 7 FG 7-2, 2026-05-18)**: 1차 시도 Valkey `SET NX EX` — 다중 워커에서 원자적 dedup. 키: `mimir:<env>:viewed:<actor_id>:<document_id>` (`app.cache.make_key`).
+    - **Fallback (R-I2 fail-open)**: Valkey 장애 / disabled 시 워커별 LRU. 기존 Phase 3 동작 그대로.
     - thread-safe (단일 `threading.Lock`).
     - `actor_id=None` (anonymous) 또는 `document_id` 비어있으면 항상 False — emit 자체를 막는 가드.
     - **테스트 격리**: `viewed_throttle.reset_for_tests()` 로 캐시 비움. 운영 코드에서 호출 금지.
-    - 산출물 `docs/개발문서/S3/phase3/산출물/FG3-1_audit이벤트_실측.md` §3 의 정책 결정에 따름.
+    - 산출물 `docs/개발문서/S3/phase3/산출물/FG3-1_audit이벤트_실측.md` §3 의 정책 결정 + `docs/개발문서/S3/phase7/산출물/FG7-2_검수보고서.md` 에 따름.
 
 ### 1.7-fg32 `app.services.scope_profile_policy` ✅ (S3 Phase 3 FG 3-2, 2026-04-27)
 
@@ -217,8 +218,10 @@
     - `SCOPE_PROFILE_POLICY_CACHE_TTL_SEC` (기본 30, 0 = no cache)
   - notes:
     - **fail-closed**: 모든 실패 분기가 False 반환. 정책 데이터를 읽지 못하면 viewers 차단.
-    - **다중 워커 미지원**: process-local 캐시. 다른 워커는 TTL 까지 stale. cluster-wide invalidation 은 별 라운드.
-    - **invalidation**: `invalidate_cache(scope_profile_id)` 또는 `invalidate_cache()` 전체. admin PATCH `/scope-profiles/{id}` 가 settings 변경 시 즉시 호출.
+    - **Cluster-wide invalidation (S3 Phase 7 FG 7-3, 2026-05-18)**: `invalidate_cache(profile_id, broadcast=True)` 가 Valkey pub/sub broadcast 발행 (`app.cache.pubsub.publish_invalidate`). 채널 `mimir:<env>:cache:invalidate:scope_policy`. 모든 워커가 startup 에서 subscriber 등록 → 즉시 process-local cache 비움.
+    - **invalidation**: `invalidate_cache(scope_profile_id, broadcast=False|True)`. admin PATCH `/scope-profiles/{id}` 가 settings 변경 시 `broadcast=True` 호출 (cluster-wide). subscriber 콜백은 loop 방지를 위해 `broadcast=False`.
+    - **start_subscriber()** / **stop_subscriber()**: 앱 lifecycle hook. main.py 의 startup / shutdown 에서 호출.
+    - Valkey disabled / 장애 시: process-local TTL 30s 단독 동작 (다른 워커는 TTL 만료에 의존 — best-effort).
     - 향후 다른 정책 키 (allow_agent_actions 등) 추가 시 본 모듈에 함수 추가하고 contributors_service / 다른 호출자가 사용.
 
 ### 1.7-fg33 `app.services.notifications_service` ✅ (S3 Phase 3 FG 3-3, 2026-04-27)
@@ -485,6 +488,58 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
   - notes:
     - `MCPResponse.write_envelope` 별 필드 사용 — 클라이언트가 read/write 응답 구분 가능.
     - 모든 분기에서 `requires_human_approval=True` 강제.
+
+### 1.11-fg71 `app.cache.namespace` / `app.cache.policy` / `app.cache.valkey` 확장 ✅ (S3 Phase 7 FG 7-1, 2026-05-18)
+
+- `app.cache.namespace.make_key(feature: str, *parts) -> str` ✅
+  - purpose: `mimir:<env>:<feature>:<part1>:<part2>...` 합성. 환경 분리 강제 (R-I4).
+  - source: `backend/app/cache/namespace.py`
+  - tests: `backend/tests/unit/cache/test_namespace.py` (14 case)
+  - notes: invalid feature (빈/`:`포함/whitespace) → ValueError. parts 의 whitespace/null → 자동 sanitize.
+
+- `app.cache.namespace.make_channel(feature: str, *, org_id: str | None) -> str` ✅
+  - purpose: pub/sub 채널 합성. org_id 지정 시 `tenant:<org_id>:` prefix (R-I3).
+  - source: `backend/app/cache/namespace.py`
+
+- `app.cache.namespace.namespace_prefix() -> str` ✅
+  - purpose: 현재 환경 prefix. `settings.valkey_namespace` override 우선, 미설정 시 `mimir:<environment>`.
+
+- `app.cache.policy.policy_for(feature: str) -> FailPolicy` ✅
+  - purpose: feature 의 fail-open/closed 분류. env override 4종 (`VALKEY_FAIL_OPEN_FEATURES` / `VALKEY_FAIL_CLOSED_FEATURES`).
+  - source: `backend/app/cache/policy.py`
+  - tests: `backend/tests/unit/cache/test_policy.py` (10 case)
+  - default 분류: `viewed_throttle` / `rate_limit` / `response_cache` / `admin_settings` = FAIL_OPEN; `scope_policy` = FAIL_CLOSED; 미등록 = FAIL_CLOSED (보수).
+  - 둘 다 override 지정 시 fail-closed 우선 (보안 보수).
+
+- `app.cache.policy.is_fail_open(feature) -> bool` / `is_fail_closed(feature) -> bool` ✅
+
+- `app.cache.valkey.is_valkey_disabled() -> bool` ✅
+  - purpose: 폐쇄망 / disabled 모드 감지. `VALKEY_DISABLED=1` 또는 `VALKEY_HOST=""` 시 True.
+  - source: `backend/app/cache/valkey.py`
+  - tests: `backend/tests/unit/cache/test_valkey_disabled_mode.py` (12 case)
+
+- `app.cache.valkey.get_valkey_or_none() -> redis.Redis | None` ✅
+  - purpose: disabled 모드 시 None 반환. 호출자가 명시적 fallback 경로 사용.
+  - notes: 기존 `get_valkey()` 는 호환성 유지 (disabled 여도 instance 반환 — 명령 실행 시 ConnectionError 가능).
+
+### 1.11-fg73 `app.cache.pubsub` ✅ (S3 Phase 7 FG 7-3, 2026-05-18)
+
+- `app.cache.pubsub.publish_invalidate(feature: str, key: str, *, org_id: str | None = None) -> bool` ✅
+  - purpose: cache invalidate broadcast 발행. JSON 메시지에 `{key, ts, worker_id}` 포함.
+  - source: `backend/app/cache/pubsub.py`
+  - tests: `backend/tests/unit/cache/test_pubsub.py` (16 case)
+  - effects: Valkey PUBLISH (best-effort). disabled / 장애 시 silent skip + False 반환.
+  - DoS 방어: 메시지 크기 ≤ `MAX_MESSAGE_SIZE=1024`. 발행 전 검증.
+
+- `app.cache.pubsub.Subscriber(feature, on_invalidate, *, org_id=None)` 클래스 ✅
+  - `.start() -> bool` — daemon thread 시작. disabled / 실패 시 False.
+  - `.stop()` — `_stop_event.set()` + `_pubsub.close()`.
+  - `.dispatch(raw_message)` — 단일 메시지 처리. loop 방지 (`worker_id == WORKER_ID` skip), size limit, JSON parse fail silent skip, callback exception 격리.
+  - tests: `TestSubscriberDispatch` 11 case + `TestSubscriberStart` 2 case.
+
+- `app.cache.pubsub.WORKER_ID: str` — `f"pid-{os.getpid()}"`. loop 방지에 사용.
+
+- `app.cache.pubsub.MAX_MESSAGE_SIZE: int = 1024` — DoS 방어 상한.
 
 ### 1.7-extension `app.audit.emitter` ContextVar (R9, 2026-04-25)
 
