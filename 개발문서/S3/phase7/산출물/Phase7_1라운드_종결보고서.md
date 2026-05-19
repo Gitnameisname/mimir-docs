@@ -160,12 +160,42 @@ S3 1라운드 전체 종결은 본 Phase 7 의 공식 승인 후 별 보고서 (
 
 ---
 
-## 9. 변경 이력
+## 9. Codex 2차 시정 후 상태 (2026-05-19)
+
+`Phase7_Codex_2차_검수보고서_2026-05-19.md` 4건 발견 + 1건 권고를 다음과 같이 시정:
+
+| # | 발견 | 시정 |
+|---|---|---|
+| **P1** | FG 7-3 fail-closed 요구 불일치 | strict fail-closed 구현 + `ADR-FG7-3-fail-closed-정책.md` 승인 게이트 |
+| **P1** | 통합/chaos 검증 부분 충족 | 단위 회귀 강화. chaos 자체는 운영자 합의 후 별 산출물 (O-7-1/O-7-2) |
+| **P2** | subscriber 자동 재구독 부재 | supervisor thread + backoff 재구독 + `is_connected()` |
+| **P3** | namespace `:` segment escape 불일치 | `_INVALID_KEY_CHARS` 에 `:` 추가 + 회귀 |
+| 권고 | annotation mention 4건 (Phase 7 무관 사전-존재 실패) | Phase 5 FG 5-5 반영한 테스트 갱신 |
+
+상세: `Phase7_Codex2차_시정보고서.md`.
+
+### 회귀 결과 (2026-05-19 시정 후)
+
+- Phase 7 신규 단위: 113 / 113 ✅ (이전 101 → +12 신규)
+- Phase 7 영역 + 인접: 199 / 199 ✅
+- `annotation_service_fg33`: 41 / 41 ✅ (이전 37 / 41 → +4 시정)
+- 전체 unit: 2865 passed / 4 failed (모두 `test_embedding_dim_check.py` — `ModuleNotFoundError: alembic`, 환경 의존 — `backend/requirements.txt` 에는 `alembic>=1.13,<2.0` 명시되어 CI 환경에선 정상)
+
+### 다음 게이트 (공식 종결 전)
+
+- Codex 3차 검수 — 본 시정 보고서 + ADR 검토
+- @최철균 P1 승인 — strict fail-closed ADR + Phase 7 전체
+- 운영자 합의 — Valkey 인프라 정책 (R-I3 ACL, chaos test 계획)
+
+---
+
+## 10. 변경 이력
 
 | 일자 | 변경 | 작성자 |
 |---|---|---|
 | 2026-05-18 | 초안 — FG 7-1/7-2/7-3 1차 종결 | Claude |
+| 2026-05-19 | Codex 2차 시정 (P1 fail-closed + P2 reconnect + P3 `:` escape + 권고 annotation 4건) 반영 | Claude |
 
 ---
 
-*S3 Phase 7 — 인프라 라운드. S3 1라운드 마지막 Phase. Codex 2차 검수 + @최철균 P1 승인 + 운영자 합의 후 공식 종결.*
+*S3 Phase 7 — 인프라 라운드. S3 1라운드 마지막 Phase. Codex 3차 검수 + @최철균 P1 승인 + 운영자 합의 후 공식 종결.*

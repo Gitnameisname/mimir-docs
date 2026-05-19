@@ -221,7 +221,10 @@
     - **Cluster-wide invalidation (S3 Phase 7 FG 7-3, 2026-05-18)**: `invalidate_cache(profile_id, broadcast=True)` 가 Valkey pub/sub broadcast 발행 (`app.cache.pubsub.publish_invalidate`). 채널 `mimir:<env>:cache:invalidate:scope_policy`. 모든 워커가 startup 에서 subscriber 등록 → 즉시 process-local cache 비움.
     - **invalidation**: `invalidate_cache(scope_profile_id, broadcast=False|True)`. admin PATCH `/scope-profiles/{id}` 가 settings 변경 시 `broadcast=True` 호출 (cluster-wide). subscriber 콜백은 loop 방지를 위해 `broadcast=False`.
     - **start_subscriber()** / **stop_subscriber()**: 앱 lifecycle hook. main.py 의 startup / shutdown 에서 호출.
-    - Valkey disabled / 장애 시: process-local TTL 30s 단독 동작 (다른 워커는 TTL 만료에 의존 — best-effort).
+    - **strict fail-closed (Codex 2차 P1 시정, 2026-05-19)**: `should_bypass_cache()` 가 다음 조건에서 True 반환 → process-local 캐시 우회 (매 호출 DB):
+      - `is_fail_open("scope_policy")` False (default) AND `is_valkey_disabled()` False AND subscriber 미연결.
+      - 단일 워커 모드 (`VALKEY_DISABLED=1`) 또는 운영자 opt-out (`VALKEY_FAIL_OPEN_FEATURES=scope_policy`) 시 bypass False.
+    - ADR: `docs/개발문서/S3/phase7/산출물/ADR-FG7-3-fail-closed-정책.md`.
     - 향후 다른 정책 키 (allow_agent_actions 등) 추가 시 본 모듈에 함수 추가하고 contributors_service / 다른 호출자가 사용.
 
 ### 1.7-fg33 `app.services.notifications_service` ✅ (S3 Phase 3 FG 3-3, 2026-04-27)
@@ -532,10 +535,12 @@ S2 Phase 5 자산 (propose_draft / approve_draft / reject_draft) 위에 idempote
   - DoS 방어: 메시지 크기 ≤ `MAX_MESSAGE_SIZE=1024`. 발행 전 검증.
 
 - `app.cache.pubsub.Subscriber(feature, on_invalidate, *, org_id=None)` 클래스 ✅
-  - `.start() -> bool` — daemon thread 시작. disabled / 실패 시 False.
-  - `.stop()` — `_stop_event.set()` + `_pubsub.close()`.
+  - `.start() -> bool` — supervisor thread 시작 (Codex 2차 P2 시정, 2026-05-19). disabled 모드면 False, 그 외는 True. supervisor 가 subscribe 시도 + backoff 재구독.
+  - `.stop()` — `_stop_event.set()` + `_pubsub.close()` + supervisor 종료.
+  - `.is_connected() -> bool` — 현재 subscribe 상태. 운영 모니터링 / health endpoint 노출 가능 (별 라운드).
   - `.dispatch(raw_message)` — 단일 메시지 처리. loop 방지 (`worker_id == WORKER_ID` skip), size limit, JSON parse fail silent skip, callback exception 격리.
-  - tests: `TestSubscriberDispatch` 11 case + `TestSubscriberStart` 2 case.
+  - **자동 재구독 (Codex 2차 P2)**: subscribe 실패 / connection error → backoff (1s → 2s → ... → max 30s). 회복 시 backoff 리셋.
+  - tests: `TestSubscriberDispatch` 11 case + `TestSubscriberStart` 2 case + `TestSubscriberAutoReconnect` 3 case.
 
 - `app.cache.pubsub.WORKER_ID: str` — `f"pid-{os.getpid()}"`. loop 방지에 사용.
 
